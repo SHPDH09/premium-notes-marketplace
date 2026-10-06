@@ -5,7 +5,8 @@ import { serializeNoteAdmin } from "@/lib/serializers";
 import { calculateFinalPrice } from "@/lib/pricing";
 import { uploadFile, validateImageFile, validatePdfFile } from "@/lib/storage";
 import { processNotePdfUpload } from "@/lib/process-note-pdf";
-import { DiscountType, NoteStatus } from "@prisma/client";
+import { parseNoteWritePayload } from "@/lib/admin-note-payload";
+import { NoteStatus } from "@prisma/client";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";
@@ -40,15 +41,54 @@ export async function POST(req: NextRequest) {
   if (auth.error) return auth.error;
 
   try {
+    const contentType = req.headers.get("content-type") ?? "";
+
+    if (contentType.includes("application/json")) {
+      const body = (await req.json()) as Record<string, unknown>;
+      const parsed = parseNoteWritePayload(body);
+      if (parsed.error || !parsed.data) {
+        return NextResponse.json({ error: parsed.error ?? "Invalid payload" }, { status: 400 });
+      }
+      const p = parsed.data;
+
+      if (!p.pdfStorageKey && !p.notesLink) {
+        return NextResponse.json(
+          { error: "Upload a PDF or provide an external notes link." },
+          { status: 400 }
+        );
+      }
+
+      const finalPrice = calculateFinalPrice(p.price, p.discountType, p.discountValue);
+
+      const note = await prisma.note.create({
+        data: {
+          name: p.name,
+          title: p.title,
+          description: p.description,
+          coverImage: p.coverStorageKey,
+          pdfStorageKey: p.pdfStorageKey,
+          freePreviewPages: p.freePreviewPages,
+          notesLink: p.notesLink,
+          price: p.price,
+          discountType: p.discountType,
+          discountValue: p.discountValue,
+          finalPrice,
+          status: p.status,
+        },
+      });
+
+      return NextResponse.json({ note: serializeNoteAdmin(note) }, { status: 201 });
+    }
+
     const form = await req.formData();
     const name = String(form.get("name") ?? "").trim();
     const title = String(form.get("title") ?? "").trim();
     const description = String(form.get("description") ?? "").trim();
     const notesLink = String(form.get("notesLink") ?? "").trim() || null;
     const price = parseFloat(String(form.get("price") ?? "0"));
-    const discountType = (String(form.get("discountType") ?? "PERCENTAGE") as DiscountType);
+    const discountType = String(form.get("discountType") ?? "PERCENTAGE") as import("@prisma/client").DiscountType;
     const discountValue = parseFloat(String(form.get("discountValue") ?? "0"));
-    const status = (String(form.get("status") ?? "ACTIVE") as NoteStatus);
+    const status = String(form.get("status") ?? "ACTIVE") as NoteStatus;
     const freePreviewPages = parseInt(String(form.get("freePreviewPages") ?? "2"), 10) || 2;
 
     if (!name || !title || !description || Number.isNaN(price)) {

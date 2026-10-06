@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { calculateFinalPrice } from "@/lib/pricing";
+import { uploadAdminFileDirect } from "@/lib/direct-upload-client";
+import { readJsonResponse } from "@/lib/api/fetch-json";
 
 type Props = {
   mode: "create" | "edit";
@@ -41,30 +43,48 @@ export function NoteForm({ mode, noteId, initial }: Props) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)));
-    if (cover) fd.append("cover", cover);
-    if (pdf) fd.append("pdf", pdf);
 
     const url = mode === "create" ? "/api/admin/notes" : `/api/admin/notes/${noteId}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120_000);
+    const timeout = setTimeout(() => controller.abort(), 300_000);
 
     try {
+      let coverStorageKey: string | null = null;
+      let pdfStorageKey: string | null = null;
+
+      if (cover) {
+        toast.message("Uploading cover…");
+        const uploaded = await uploadAdminFileDirect(cover, "covers");
+        if ("error" in uploaded) {
+          toast.error(uploaded.error);
+          return;
+        }
+        coverStorageKey = uploaded.key;
+      }
+
+      if (pdf) {
+        toast.message("Uploading PDF directly to storage…");
+        const uploaded = await uploadAdminFileDirect(pdf, "pdfs");
+        if ("error" in uploaded) {
+          toast.error(uploaded.error);
+          return;
+        }
+        pdfStorageKey = uploaded.key;
+      }
+
       const res = await fetch(url, {
         method: mode === "create" ? "POST" : "PATCH",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          coverStorageKey,
+          pdfStorageKey,
+        }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
 
-      let data: { error?: string } = {};
-      const text = await res.text();
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        data = { error: text || "Server error" };
-      }
+      const data = await readJsonResponse<{ error?: string }>(res);
 
       if (!res.ok) {
         toast.error(typeof data.error === "string" ? data.error : "Save failed");

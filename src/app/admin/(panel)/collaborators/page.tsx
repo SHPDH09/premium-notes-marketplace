@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { readJsonResponse } from "@/lib/api/fetch-json";
+import { uploadAdminFileDirect } from "@/lib/direct-upload-client";
 
 type Collaborator = {
   id: string;
@@ -58,11 +59,21 @@ export default function AdminCollaboratorsPage() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-    if (logo) fd.append("logo", logo);
     try {
-      const res = await fetch("/api/admin/collaborators", { method: "POST", body: fd });
+      let logoStorageKey: string | null = null;
+      if (logo) {
+        const uploaded = await uploadAdminFileDirect(logo, "covers");
+        if ("error" in uploaded) {
+          toast.error(uploaded.error);
+          return;
+        }
+        logoStorageKey = uploaded.key;
+      }
+      const res = await fetch("/api/admin/collaborators", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, logoStorageKey }),
+      });
       const data = await readJsonResponse<{ error?: string; warning?: string }>(res);
       if (!res.ok) return toast.error(data.error ?? "Failed to add collaborator");
       toast.success("Collaborator added");

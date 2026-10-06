@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { serializeCollaborator } from "@/lib/collaborators";
 import { uploadFile, validateImageFile } from "@/lib/storage";
 import { CollaboratorType, PublishStatus } from "@prisma/client";
+import { isAllowedStorageKey } from "@/lib/file-limits";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,38 @@ export async function POST(req: NextRequest) {
   if (auth.error) return auth.error;
 
   try {
+    const contentType = req.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await req.json()) as Record<string, unknown>;
+      const name = String(body.name ?? "").trim();
+      const type = parseType(String(body.type ?? "COMPANY"));
+      const website = String(body.website ?? "").trim() || null;
+      const description = String(body.description ?? "").trim() || null;
+      const statusRaw = String(body.status ?? "ACTIVE").toUpperCase();
+      const status: PublishStatus = statusRaw === "DISABLED" ? "DISABLED" : "ACTIVE";
+      const sortOrder = parseInt(String(body.sortOrder ?? "0"), 10) || 0;
+      const logoStorageKey = body.logoStorageKey ? String(body.logoStorageKey).trim() : null;
+
+      if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
+      if (logoStorageKey && !isAllowedStorageKey(logoStorageKey, "covers")) {
+        return NextResponse.json({ error: "Invalid logo storage key" }, { status: 400 });
+      }
+
+      const item = await prisma.collaborator.create({
+        data: {
+          name,
+          type,
+          logoImage: logoStorageKey,
+          website,
+          description,
+          status,
+          sortOrder,
+        },
+      });
+
+      return NextResponse.json({ collaborator: serializeCollaborator(item) }, { status: 201 });
+    }
+
     const form = await req.formData();
     const name = String(form.get("name") ?? "").trim();
     const type = parseType(String(form.get("type") ?? "COMPANY"));
