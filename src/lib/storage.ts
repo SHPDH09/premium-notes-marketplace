@@ -53,24 +53,32 @@ export async function uploadFile(
       ? "pdf"
       : contentType.split("/")[1]?.replace("jpeg", "jpg") ?? "bin";
   const key = `${folder}/${randomUUID()}.${ext}`;
-  const uploadPromise = client.send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: file,
-      ContentType: contentType,
-    })
-  );
+  try {
+    const uploadPromise = client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: file,
+        ContentType: contentType,
+      })
+    );
 
-  const timeoutMs = 45_000;
-  await Promise.race([
-    uploadPromise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Storage upload timed out. Check STORAGE_* env and bucket name.")), timeoutMs)
-    ),
-  ]);
+    const timeoutMs = 45_000;
+    await Promise.race([
+      uploadPromise,
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Storage upload timed out. Check STORAGE_* env and bucket name.")),
+          timeoutMs
+        )
+      ),
+    ]);
 
-  return { key };
+    return { key };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Storage upload failed";
+    return { key: "", error: message };
+  }
 }
 
 export async function getSignedDownloadUrl(key: string, expiresIn = 300): Promise<string | null> {

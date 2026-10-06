@@ -3,7 +3,16 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-options";
 
 export async function requireSession() {
-  const session = await getServerSession(authOptions);
+  let session;
+  try {
+    session = await getServerSession(authOptions);
+  } catch (e) {
+    console.error("getServerSession failed", e);
+    return {
+      session: null,
+      error: NextResponse.json({ error: "Session error. Sign in again." }, { status: 401 }),
+    };
+  }
   if (!session?.user?.id) {
     return { session: null, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }

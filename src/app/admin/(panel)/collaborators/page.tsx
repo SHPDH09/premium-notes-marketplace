@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { readJsonResponse } from "@/lib/api/fetch-json";
 
 type Collaborator = {
   id: string;
@@ -34,11 +35,21 @@ export default function AdminCollaboratorsPage() {
   const [logo, setLogo] = useState<File | null>(null);
 
   async function load() {
-    const params = new URLSearchParams();
-    if (filter !== "all") params.set("type", filter);
-    const res = await fetch(`/api/admin/collaborators?${params}`);
-    const data = await res.json();
-    setItems(data.collaborators ?? []);
+    try {
+      const params = new URLSearchParams();
+      if (filter !== "all") params.set("type", filter);
+      const res = await fetch(`/api/admin/collaborators?${params}`);
+      const data = await readJsonResponse<{ collaborators?: Collaborator[] }>(res);
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to load collaborators");
+        setItems([]);
+        return;
+      }
+      setItems(data.collaborators ?? []);
+    } catch {
+      toast.error("Network error while loading collaborators");
+      setItems([]);
+    }
   }
 
   useEffect(() => {
@@ -50,27 +61,36 @@ export default function AdminCollaboratorsPage() {
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => fd.append(k, v));
     if (logo) fd.append("logo", logo);
-    const res = await fetch("/api/admin/collaborators", { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error ?? "Failed");
-    toast.success("Collaborator added");
-    setForm({ name: "", type: "COMPANY", website: "", description: "", sortOrder: "0", status: "ACTIVE" });
-    setLogo(null);
-    load();
+    try {
+      const res = await fetch("/api/admin/collaborators", { method: "POST", body: fd });
+      const data = await readJsonResponse<{ error?: string; warning?: string }>(res);
+      if (!res.ok) return toast.error(data.error ?? "Failed to add collaborator");
+      toast.success("Collaborator added");
+      if (data.warning) toast.warning(data.warning);
+      setForm({ name: "", type: "COMPANY", website: "", description: "", sortOrder: "0", status: "ACTIVE" });
+      setLogo(null);
+      load();
+    } catch {
+      toast.error("Network error while saving collaborator");
+    }
   }
 
   async function toggle(id: string, status: string) {
-    await fetch(`/api/admin/collaborators/${id}`, {
+    const res = await fetch(`/api/admin/collaborators/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: status === "ACTIVE" ? "DISABLED" : "ACTIVE" }),
     });
+    const data = await readJsonResponse(res);
+    if (!res.ok) return toast.error(data.error ?? "Update failed");
     load();
   }
 
   async function remove(id: string) {
     if (!confirm("Delete this collaborator?")) return;
-    await fetch(`/api/admin/collaborators/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/collaborators/${id}`, { method: "DELETE" });
+    const data = await readJsonResponse(res);
+    if (!res.ok) return toast.error(data.error ?? "Delete failed");
     toast.success("Deleted");
     load();
   }
