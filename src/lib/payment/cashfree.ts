@@ -74,3 +74,25 @@ export async function fetchCashfreeOrder(orderId: string): Promise<{
 export function isPaymentSuccess(status: string): boolean {
   return status === "PAID" || status === "SUCCESS";
 }
+
+export async function createCashfreeRefund(params: {
+  orderId: string;
+  refundId: string;
+  amount: number;
+  note?: string;
+}): Promise<void> {
+  const res = await fetch(`${CASHFREE_API}/orders/${params.orderId}/refunds`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      refund_id: params.refundId,
+      refund_amount: params.amount,
+      refund_note: params.note ?? "Admin refund",
+    }),
+  });
+
+  const data = (await res.json()) as { message?: string; refund_status?: string };
+  if (!res.ok) {
+    throw new Error(data.message ?? "Failed to create refund with payment gateway.");
+  }
+}
