@@ -41,7 +41,7 @@ async function main() {
 
   const collabs = [
     { name: "Testmile College", type: "COLLEGE" as const, description: "Academic partner", sortOrder: 1 },
-    { name: "NoteVault Corp", type: "COMPANY" as const, description: "Enterprise collaboration", sortOrder: 2 },
+    { name: "TechLaunchpad", type: "COMPANY" as const, description: "Enterprise collaboration", sortOrder: 2 },
     { name: "EdTech Institute", type: "INSTITUTE" as const, description: "Research & learning hub", sortOrder: 3 },
   ];
 

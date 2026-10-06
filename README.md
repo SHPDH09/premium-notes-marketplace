@@ -1,4 +1,4 @@
-# NoteVault Pro — Premium Notes Selling Platform
+# TechLaunchpad — Premium Notes Selling Platform
 
 Production-ready notes marketplace with **Student Panel**, **Admin Panel**, secure checkout, coupons, and purchase-gated PDF access.
 

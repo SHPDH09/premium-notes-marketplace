@@ -1,7 +1,7 @@
 export const brand = {
-  name: process.env.NEXT_PUBLIC_BRAND_NAME ?? "NoteVault Pro",
+  name: process.env.NEXT_PUBLIC_BRAND_NAME ?? "TechLaunchpad",
   tagline: "Premium study notes for ambitious learners",
-  logoText: process.env.NEXT_PUBLIC_BRAND_LOGO_TEXT ?? "NV",
+  logoText: process.env.NEXT_PUBLIC_BRAND_LOGO_TEXT ?? "TL",
   primaryColor: "indigo",
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@notevault.pro",
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "support@techlaunchpad.in",
 } as const;
