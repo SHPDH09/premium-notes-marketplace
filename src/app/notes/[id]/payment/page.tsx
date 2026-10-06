@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { NotePreviewPanel } from "@/components/notes/note-preview-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand } from "@/config/brand";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { refundPolicyPaymentBullet } from "@/lib/refund-policy";
 
 export default function NotePaymentPage() {
   const { id } = useParams<{ id: string }>();
@@ -105,7 +107,15 @@ export default function NotePaymentPage() {
               <li>Instant access to full PDF after successful payment</li>
               <li>No duplicate charges — owned forever in your library</li>
               <li>Prices verified server-side (secure checkout)</li>
+              <li>{refundPolicyPaymentBullet()}</li>
             </ul>
+            <p className="text-xs text-slate-500">
+              By paying, you agree to our{" "}
+              <Link href="/privacy" className="font-medium text-indigo-600 hover:underline">
+                Privacy Policy &amp; refund terms
+              </Link>
+              .
+            </p>
             {note.owned ? (
               <Button asChild className="w-full">
                 <Link href="/purchases">Already unlocked — open notes</Link>
@@ -121,6 +131,7 @@ export default function NotePaymentPage() {
           </CardContent>
         </Card>
       </div>
+      <SiteFooter />
     </div>
   );
 }

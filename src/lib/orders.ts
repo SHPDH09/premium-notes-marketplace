@@ -2,6 +2,14 @@ import { prisma } from "@/lib/db";
 import { randomUUID } from "crypto";
 import { createCashfreeRefund } from "@/lib/payment/cashfree";
 import { formatRefundAdminNote } from "@/lib/refund-reason";
+import {
+  isOrderFullyRefundedByPolicy,
+  isWithinRefundWindow,
+  maxNetRefundableRemaining,
+  orderPaymentTime,
+  PLATFORM_REFUND_FEE_PERCENT,
+  REFUND_WINDOW_HOURS,
+} from "@/lib/refund-policy";
 import { decimalToNumber } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 
@@ -105,21 +113,34 @@ export async function refundOrder(
     throw new Error("Only successful payments can be refunded");
   }
 
+  const paidAt = orderPaymentTime(order);
+  if (!isWithinRefundWindow(paidAt)) {
+    throw new Error(
+      `Refunds are not available more than ${REFUND_WINDOW_HOURS} hours after payment`
+    );
+  }
+
   const total = roundMoney(decimalToNumber(order.totalAmount));
   const alreadyRefunded = roundMoney(decimalToNumber(order.refundedAmount));
-  const remaining = roundMoney(total - alreadyRefunded);
-  if (remaining <= 0) throw new Error("No refundable balance remaining");
+  const remainingNet = maxNetRefundableRemaining(total, alreadyRefunded);
+  if (remainingNet <= 0) {
+    throw new Error(
+      `No refundable balance remaining (${PLATFORM_REFUND_FEE_PERCENT}% platform charge applies to all refunds)`
+    );
+  }
 
-  let refundAmount = options.amount != null ? roundMoney(options.amount) : remaining;
+  let refundAmount = options.amount != null ? roundMoney(options.amount) : remainingNet;
   if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
     throw new Error("Refund amount must be greater than zero");
   }
-  if (refundAmount > remaining + 0.001) {
-    throw new Error(`Refund amount cannot exceed ${remaining.toFixed(2)} (remaining balance)`);
+  if (refundAmount > remainingNet + 0.001) {
+    throw new Error(
+      `Refund amount cannot exceed ${remainingNet.toFixed(2)} (max after ${PLATFORM_REFUND_FEE_PERCENT}% platform fee)`
+    );
   }
-  if (refundAmount > remaining) refundAmount = remaining;
+  if (refundAmount > remainingNet) refundAmount = remainingNet;
 
-  const fullyRefunded = roundMoney(alreadyRefunded + refundAmount) >= total - 0.001;
+  const fullyRefunded = isOrderFullyRefundedByPolicy(total, roundMoney(alreadyRefunded + refundAmount));
 
   let gatewayWarning: string | undefined;
   const externalTxnId = order.transaction?.transactionId ?? "";
@@ -191,6 +212,4 @@ export function generatePaymentOrderId(): string {
   return `ord_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
 }
 
-export function orderRefundableRemaining(totalAmount: Prisma.Decimal, refundedAmount: Prisma.Decimal): number {
-  return roundMoney(decimalToNumber(totalAmount) - decimalToNumber(refundedAmount));
-}
+export { orderRefundableRemaining } from "@/lib/refund-policy";

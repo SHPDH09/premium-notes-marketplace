@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PublicNavbar } from "@/components/layout/public-navbar";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
 import { NoteCard } from "@/components/notes/note-card";
 import { brand } from "@/config/brand";
@@ -136,12 +137,7 @@ export default async function HomePage() {
           </div>
         </section>
       </main>
-      <footer className="border-t border-slate-200 bg-white py-10">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6">
-          <p className="text-sm text-slate-500">© {new Date().getFullYear()} {brand.name}. All rights reserved.</p>
-          <p className="text-sm text-slate-500">{brand.supportEmail}</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -5,6 +5,14 @@ import { decimalToNumber } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 import { resolveRefundReason } from "@/lib/refund-reason";
 import { orderRefundableRemaining } from "@/lib/orders";
+import {
+  isWithinRefundWindow,
+  maxNetRefundableTotal,
+  orderPaymentTime,
+  PLATFORM_REFUND_FEE_PERCENT,
+  REFUND_WINDOW_HOURS,
+  refundWindowExpiresAt,
+} from "@/lib/refund-policy";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin();
@@ -76,8 +84,21 @@ export async function GET(req: NextRequest) {
         reason: r.reason,
         createdAt: r.createdAt.toISOString(),
       })),
+      maxNetRefundableTotal: maxNetRefundableTotal(decimalToNumber(o.totalAmount)),
+      refundWindowHours: REFUND_WINDOW_HOURS,
+      platformFeePercent: PLATFORM_REFUND_FEE_PERCENT,
+      refundDeadline:
+        o.paymentStatus === "SUCCESS" || o.paymentStatus === "PARTIALLY_REFUNDED"
+          ? refundWindowExpiresAt(orderPaymentTime(o)).toISOString()
+          : null,
+      refundWindowOpen:
+        o.paymentStatus === "SUCCESS" || o.paymentStatus === "PARTIALLY_REFUNDED"
+          ? isWithinRefundWindow(orderPaymentTime(o))
+          : false,
       canRefund:
-        o.paymentStatus === "SUCCESS" || o.paymentStatus === "PARTIALLY_REFUNDED",
+        (o.paymentStatus === "SUCCESS" || o.paymentStatus === "PARTIALLY_REFUNDED") &&
+        isWithinRefundWindow(orderPaymentTime(o)) &&
+        orderRefundableRemaining(o.totalAmount, o.refundedAmount) > 0,
       date: o.createdAt.toISOString(),
     })),
   });

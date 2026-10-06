@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { refundPolicyShortText } from "@/lib/refund-policy";
 
 export default function TransactionsPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -16,7 +18,13 @@ export default function TransactionsPage() {
 
   return (
     <StudentShell>
-      <h1 className="mb-6 text-2xl font-bold">My Transactions</h1>
+      <h1 className="mb-2 text-2xl font-bold">My Transactions</h1>
+      <p className="mb-6 text-sm text-slate-600">
+        {refundPolicyShortText()}{" "}
+        <Link href="/privacy#refunds" className="font-medium text-indigo-600 hover:underline">
+          Read full policy
+        </Link>
+      </p>
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="min-w-full text-sm">

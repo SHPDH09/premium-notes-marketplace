@@ -33,6 +33,10 @@ type TxRow = {
   refundableRemaining: number;
   refunds: RefundEntry[];
   canRefund: boolean;
+  refundWindowOpen: boolean;
+  refundDeadline: string | null;
+  platformFeePercent: number;
+  maxNetRefundableTotal: number;
   date: string;
 };
 
@@ -42,6 +46,7 @@ type RefundDialogState = {
   amount: string;
   finalAmount: number;
   refundableRemaining: number;
+  platformFeePercent: number;
 };
 
 export default function AdminTransactionsPage() {
@@ -68,12 +73,17 @@ export default function AdminTransactionsPage() {
   }, []);
 
   function openRefundDialog(t: TxRow) {
+    if (!t.refundWindowOpen) {
+      toast.error("Refund window closed (12 hours after payment)");
+      return;
+    }
     setRefundDialog({
       orderId: t.orderId,
       reason: "",
       amount: t.refundableRemaining.toFixed(2),
       finalAmount: t.finalAmount,
       refundableRemaining: t.refundableRemaining,
+      platformFeePercent: t.platformFeePercent,
     });
   }
 
@@ -145,6 +155,13 @@ export default function AdminTransactionsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Transactions</h1>
+      <p className="text-sm text-slate-600">
+        Refunds: within 12 hours of payment only. Customer receives the amount you enter; max refund
+        per order is 80% of order total (20% platform charge).{" "}
+        <Link href="/privacy#refunds" className="text-indigo-600 hover:underline">
+          Policy
+        </Link>
+      </p>
       <div className="flex gap-2">
         <Input placeholder="Search..." value={q} onChange={(e) => setQ(e.target.value)} />
         <Button variant="outline" onClick={() => void load()}>
@@ -203,7 +220,8 @@ export default function AdminTransactionsPage() {
                         {formatCurrency(t.refundedAmount)}
                         {t.refundableRemaining > 0 ? (
                           <div className="text-xs text-slate-500">
-                            {formatCurrency(t.refundableRemaining)} left
+                            {formatCurrency(t.refundableRemaining)} net left (after{" "}
+                            {t.platformFeePercent}% fee cap)
                           </div>
                         ) : null}
                       </div>
@@ -247,10 +265,25 @@ export default function AdminTransactionsPage() {
                         size="sm"
                         variant="destructive"
                         disabled={!t.canRefund || refundingId === t.orderId}
+                        title={
+                          !t.refundWindowOpen && t.paymentStatus === "SUCCESS"
+                            ? "Refund window expired (12h)"
+                            : !t.canRefund
+                              ? "Not refundable"
+                              : undefined
+                        }
                         onClick={() => openRefundDialog(t)}
                       >
                         {refundingId === t.orderId ? "Refunding…" : "Refund"}
                       </Button>
+                      {t.refundDeadline &&
+                      (t.paymentStatus === "SUCCESS" || t.paymentStatus === "PARTIALLY_REFUNDED") ? (
+                        <span className="w-full text-xs text-slate-500">
+                          {t.refundWindowOpen
+                            ? `Refund until ${new Date(t.refundDeadline).toLocaleString()}`
+                            : "Refund window closed"}
+                        </span>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -268,9 +301,11 @@ export default function AdminTransactionsPage() {
           <div className="w-full max-w-md space-y-4 rounded-2xl border bg-white p-6 shadow-lg">
             <h2 className="text-lg font-semibold">Refund transaction</h2>
             <p className="text-sm text-slate-600">
-              Order total {formatCurrency(refundDialog.finalAmount)} · remaining{" "}
-              <strong>{formatCurrency(refundDialog.refundableRemaining)}</strong>. Partial refunds
-              keep note access until the order is fully refunded.
+              Order total {formatCurrency(refundDialog.finalAmount)} · max refundable to customer{" "}
+              <strong>{formatCurrency(refundDialog.refundableRemaining)}</strong> remaining (includes{" "}
+              {refundDialog.platformFeePercent}% platform fee on the order). Amount sent to Cashfree is
+              what the customer receives. Partial refunds keep note access until fully refunded under
+              policy.
             </p>
             <div>
               <Label htmlFor="refund-amount">Refund amount (₹)</Label>
