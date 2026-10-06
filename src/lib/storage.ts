@@ -53,7 +53,7 @@ export async function uploadFile(
       ? "pdf"
       : contentType.split("/")[1]?.replace("jpeg", "jpg") ?? "bin";
   const key = `${folder}/${randomUUID()}.${ext}`;
-  await client.send(
+  const uploadPromise = client.send(
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -61,6 +61,15 @@ export async function uploadFile(
       ContentType: contentType,
     })
   );
+
+  const timeoutMs = 45_000;
+  await Promise.race([
+    uploadPromise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Storage upload timed out. Check STORAGE_* env and bucket name.")), timeoutMs)
+    ),
+  ]);
+
   return { key };
 }
 

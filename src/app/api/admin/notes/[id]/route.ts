@@ -7,6 +7,9 @@ import { deleteStoredFile, uploadFile, validateImageFile, validatePdfFile } from
 import { processNotePdfUpload } from "@/lib/process-note-pdf";
 import { DiscountType, NoteStatus } from "@prisma/client";
 
+export const maxDuration = 60;
+export const runtime = "nodejs";
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
@@ -19,6 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
 
+  try {
   const existing = await prisma.note.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -74,11 +78,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (err) return NextResponse.json({ error: err }, { status: 400 });
     const buf = Buffer.from(await pdf.arrayBuffer());
     if (existing.pdfStorageKey) await deleteStoredFile(existing.pdfStorageKey);
-    const processed = await processNotePdfUpload(buf, freePreviewPages, existing.pdfPreviewStorageKey);
+    if (existing.pdfPreviewStorageKey) await deleteStoredFile(existing.pdfPreviewStorageKey);
+    const processed = await processNotePdfUpload(buf);
     if ("error" in processed) return NextResponse.json({ error: processed.error }, { status: 500 });
     pdfKey = processed.fullKey;
-    pdfPreviewKey = processed.previewKey;
-    pdfPageCount = processed.pageCount || null;
+    pdfPreviewKey = null;
+    pdfPageCount = null;
   }
 
   if (!pdfKey && !notesLink) {
@@ -108,6 +113,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   });
 
   return NextResponse.json({ note: serializeNoteAdmin(note) });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to update note";
+    console.error("admin notes PATCH", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {

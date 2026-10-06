@@ -1,29 +1,12 @@
-import { extractPreviewPdf } from "@/lib/pdf-preview";
-import { uploadFile, deleteStoredFile } from "@/lib/storage";
+import { uploadFile } from "@/lib/storage";
 
+/** Upload full PDF only; preview is generated lazily on first public preview request. */
 export async function processNotePdfUpload(
-  pdfBuffer: Buffer,
-  freePreviewPages: number,
-  oldPreviewKey?: string | null
-): Promise<{ fullKey: string; previewKey: string | null; pageCount: number } | { error: string }> {
+  pdfBuffer: Buffer
+): Promise<{ fullKey: string } | { error: string }> {
   const fullUploaded = await uploadFile(pdfBuffer, "application/pdf", "pdfs");
   if (fullUploaded.error || !fullUploaded.key) {
-    return { error: fullUploaded.error ?? "Upload failed" };
+    return { error: fullUploaded.error ?? "PDF upload failed. Check storage settings." };
   }
-
-  try {
-    const { preview, totalPages } = await extractPreviewPdf(pdfBuffer, freePreviewPages);
-    const previewUploaded = await uploadFile(preview, "application/pdf", "pdfs");
-    if (previewUploaded.error || !previewUploaded.key) {
-      return { fullKey: fullUploaded.key, previewKey: null, pageCount: totalPages };
-    }
-    if (oldPreviewKey) await deleteStoredFile(oldPreviewKey);
-    return {
-      fullKey: fullUploaded.key,
-      previewKey: previewUploaded.key,
-      pageCount: totalPages,
-    };
-  } catch {
-    return { fullKey: fullUploaded.key, previewKey: null, pageCount: 0 };
-  }
+  return { fullKey: fullUploaded.key };
 }

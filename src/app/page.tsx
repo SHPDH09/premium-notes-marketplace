@@ -34,9 +34,9 @@ export default async function HomePage() {
       <PublicNavbar />
       <main>
         <section className="relative overflow-hidden border-b border-slate-200/70 bg-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),transparent_45%)]" />
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:py-24">
-            <div>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(99,102,241,0.12),transparent_45%)]" />
+          <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:py-24">
+            <div className="relative z-10">
               <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
                 <Sparkles className="h-3.5 w-3.5" /> Premium EdTech Marketplace
               </p>
@@ -53,7 +53,7 @@ export default async function HomePage() {
                 </Button>
               </div>
             </div>
-            <div className="relative rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-8 shadow-xl shadow-indigo-100/50">
+            <div className="relative z-10 rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-8 shadow-xl shadow-indigo-100/50">
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
                   { icon: BookOpen, title: "Expert Notes", text: "High-quality PDFs and resources" },

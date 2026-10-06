@@ -1,5 +1,10 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "regions": ["bom1"]
+  "regions": ["bom1"],
+  "functions": {
+    "src/app/api/admin/notes/**/*.ts": {
+      "maxDuration": 60
+    }
+  }
 }

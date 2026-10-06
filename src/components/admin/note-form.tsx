@@ -47,15 +47,41 @@ export function NoteForm({ mode, noteId, initial }: Props) {
     if (pdf) fd.append("pdf", pdf);
 
     const url = mode === "create" ? "/api/admin/notes" : `/api/admin/notes/${noteId}`;
-    const res = await fetch(url, { method: mode === "create" ? "POST" : "PATCH", body: fd });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      toast.error(data.error ?? "Save failed");
-      return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000);
+
+    try {
+      const res = await fetch(url, {
+        method: mode === "create" ? "POST" : "PATCH",
+        body: fd,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      let data: { error?: string } = {};
+      const text = await res.text();
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { error: text || "Server error" };
+      }
+
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Save failed");
+        return;
+      }
+      toast.success(mode === "create" ? "Note added successfully." : "Note updated successfully.");
+      router.push("/admin/notes");
+    } catch (err) {
+      clearTimeout(timeout);
+      if (err instanceof Error && err.name === "AbortError") {
+        toast.error("Upload timed out. Try a smaller PDF or check storage settings.");
+      } else {
+        toast.error("Network error while saving. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
-    toast.success(mode === "create" ? "Note added successfully." : "Note updated successfully.");
-    router.push("/admin/notes");
   }
 
   return (
