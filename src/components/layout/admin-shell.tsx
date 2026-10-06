@@ -13,6 +13,8 @@ import {
   User,
   KeyRound,
   Menu,
+  Handshake,
+  Home,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -21,6 +23,8 @@ const nav = [
   { href: "/admin/notes", label: "Notes", icon: FileText },
   { href: "/admin/coupons", label: "Coupons", icon: Ticket },
   { href: "/admin/users", label: "Students", icon: Users },
+  { href: "/admin/collaborators", label: "Collaborations", icon: Handshake },
+  { href: "/admin/homepage", label: "Homepage", icon: Home },
   { href: "/admin/transactions", label: "Transactions", icon: Receipt },
   { href: "/admin/profile", label: "Profile", icon: User },
   { href: "/admin/settings/password", label: "Password", icon: KeyRound },

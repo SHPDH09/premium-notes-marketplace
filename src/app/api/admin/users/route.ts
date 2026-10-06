@@ -47,6 +47,10 @@ const createSchema = z.object({
   phone: z.string().optional(),
   password: z.string().min(8),
   status: z.enum(["ACTIVE", "DISABLED"]).default("ACTIVE"),
+  showOnHomepage: z.boolean().optional(),
+  homepageInstitute: z.string().optional(),
+  homepageHeadline: z.string().optional(),
+  homepageQuote: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -72,6 +76,28 @@ export async function POST(req: NextRequest) {
       status: parsed.data.status,
     },
   });
+
+  if (parsed.data.showOnHomepage) {
+    await prisma.studentSpotlight.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        displayName: user.name,
+        institute: parsed.data.homepageInstitute?.trim() || null,
+        headline: parsed.data.homepageHeadline?.trim() || "Featured Student",
+        quote: parsed.data.homepageQuote?.trim() || null,
+        photo: user.profileImage,
+        status: "ACTIVE",
+      },
+      update: {
+        displayName: user.name,
+        institute: parsed.data.homepageInstitute?.trim() || null,
+        headline: parsed.data.homepageHeadline?.trim() || "Featured Student",
+        quote: parsed.data.homepageQuote?.trim() || null,
+        status: "ACTIVE",
+      },
+    });
+  }
 
   return NextResponse.json({ user: serializeUserAdmin(user) }, { status: 201 });
 }

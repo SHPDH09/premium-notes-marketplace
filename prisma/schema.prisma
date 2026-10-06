@@ -47,6 +47,17 @@ enum TransactionStatus {
   REFUNDED
 }
 
+enum CollaboratorType {
+  COMPANY
+  COLLEGE
+  INSTITUTE
+}
+
+enum PublishStatus {
+  ACTIVE
+  DISABLED
+}
+
 model User {
   id            String     @id @default(cuid())
   name          String
@@ -66,6 +77,7 @@ model User {
   purchases          Purchase[]
   couponRedemptions  CouponRedemption[]
   adminProfile       AdminProfile?
+  studentSpotlight   StudentSpotlight?
 
   @@map("users")
 }
@@ -247,4 +259,40 @@ model Purchase {
   @@unique([userId, noteId])
   @@index([userId])
   @@map("purchases")
+}
+
+model Collaborator {
+  id          String           @id @default(cuid())
+  name        String
+  type        CollaboratorType
+  logoImage   String?          @map("logo_image")
+  website     String?
+  description String?          @db.Text
+  status      PublishStatus    @default(ACTIVE)
+  sortOrder   Int              @default(0) @map("sort_order")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  @@index([status, sortOrder])
+  @@index([type])
+  @@map("collaborators")
+}
+
+model StudentSpotlight {
+  id          String        @id @default(cuid())
+  userId      String?       @unique @map("user_id")
+  displayName String        @map("display_name")
+  institute   String?
+  headline    String?
+  quote       String?       @db.Text
+  photo       String?
+  status      PublishStatus @default(ACTIVE)
+  sortOrder   Int           @default(0) @map("sort_order")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, sortOrder])
+  @@map("student_spotlights")
 }

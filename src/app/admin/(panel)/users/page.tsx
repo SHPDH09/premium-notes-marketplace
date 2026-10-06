@@ -11,7 +11,17 @@ import { toast } from "sonner";
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [q, setQ] = useState("");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", status: "ACTIVE" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    status: "ACTIVE",
+    showOnHomepage: false,
+    homepageInstitute: "",
+    homepageHeadline: "Featured Student",
+    homepageQuote: "",
+  });
 
   async function load() {
     const params = new URLSearchParams();
@@ -41,28 +51,61 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Student Management</h1>
-      <form onSubmit={addStudent} className="grid gap-3 rounded-2xl border bg-white p-5 md:grid-cols-5">
-        <div>
-          <Label>Name</Label>
-          <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+      <form onSubmit={addStudent} className="space-y-4 rounded-2xl border bg-white p-5">
+        <div className="grid gap-3 md:grid-cols-5">
+          <div>
+            <Label>Name</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          </div>
+          <div>
+            <Label>Email</Label>
+            <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          </div>
+          <div>
+            <Label>Password</Label>
+            <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+          </div>
+          <div className="flex items-end">
+            <Button type="submit" className="w-full">
+              Add Student
+            </Button>
+          </div>
         </div>
-        <div>
-          <Label>Email</Label>
-          <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        </div>
-        <div>
-          <Label>Phone</Label>
-          <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        </div>
-        <div>
-          <Label>Password</Label>
-          <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-        </div>
-        <div className="flex items-end">
-          <Button type="submit" className="w-full">
-            Add Student
-          </Button>
-        </div>
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={form.showOnHomepage}
+            onChange={(e) => setForm({ ...form, showOnHomepage: e.target.checked })}
+          />
+          Show this student on home page (spotlight)
+        </label>
+        {form.showOnHomepage && (
+          <div className="grid gap-3 md:grid-cols-3">
+            <div>
+              <Label>Institute / College</Label>
+              <Input
+                value={form.homepageInstitute}
+                onChange={(e) => setForm({ ...form, homepageInstitute: e.target.value })}
+                placeholder="Testmile College"
+              />
+            </div>
+            <div>
+              <Label>Headline</Label>
+              <Input
+                value={form.homepageHeadline}
+                onChange={(e) => setForm({ ...form, homepageHeadline: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Quote</Label>
+              <Input value={form.homepageQuote} onChange={(e) => setForm({ ...form, homepageQuote: e.target.value })} />
+            </div>
+          </div>
+        )}
       </form>
       <div className="flex gap-2">
         <Input placeholder="Search students" value={q} onChange={(e) => setQ(e.target.value)} />

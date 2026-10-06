@@ -6,6 +6,8 @@ import { brand } from "@/config/brand";
 import { prisma } from "@/lib/db";
 import { serializeNotePublic } from "@/lib/serializers";
 import { BookOpen, ShieldCheck, Sparkles, GraduationCap } from "lucide-react";
+import { CollaboratorsSection } from "@/components/home/collaborators-section";
+import { StudentSpotlightsSection } from "@/components/home/student-spotlights-section";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +90,9 @@ export default async function HomePage() {
             )}
           </div>
         </section>
+
+        <CollaboratorsSection />
+        <StudentSpotlightsSection />
 
         <section className="bg-white py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
