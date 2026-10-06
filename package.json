@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "storage:cors": "node scripts/ensure-storage-cors.mjs"
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"
