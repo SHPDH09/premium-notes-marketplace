@@ -7,12 +7,14 @@ export function PolicyNotice() {
       <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
         <h2 className="text-lg font-semibold text-slate-900">Privacy &amp; refund policy</h2>
         <p className="mt-3 text-sm leading-relaxed text-slate-600">{refundPolicyShortText()}</p>
-        <Link
-          href="/privacy"
-          className="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:underline"
-        >
-          Read full Privacy Policy &amp; payment terms →
-        </Link>
+        <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm font-semibold">
+          <Link href="/privacy" className="text-indigo-600 hover:underline">
+            Privacy Policy →
+          </Link>
+          <Link href="/terms" className="text-indigo-600 hover:underline">
+            Terms &amp; Conditions →
+          </Link>
+        </div>
       </div>
     </section>
   );

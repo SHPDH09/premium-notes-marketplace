@@ -1,9 +1,17 @@
 import { decimalToNumber } from "@/lib/utils";
 import type { Prisma } from "@prisma/client";
+import {
+  PLATFORM_REFUND_FEE_RATE,
+  REFUND_WINDOW_HOURS,
+} from "@/lib/legal/refund-policy-content";
 
-export const REFUND_WINDOW_HOURS = 12;
-export const PLATFORM_REFUND_FEE_RATE = 0.2;
-export const PLATFORM_REFUND_FEE_PERCENT = Math.round(PLATFORM_REFUND_FEE_RATE * 100);
+export {
+  REFUND_WINDOW_HOURS,
+  PLATFORM_REFUND_FEE_RATE,
+  PLATFORM_REFUND_FEE_PERCENT,
+  refundPolicyShortText,
+  refundPolicyPaymentBullet,
+} from "@/lib/legal/refund-policy-content";
 
 function roundMoney(n: number): number {
   return Math.round(n * 100) / 100;
@@ -43,12 +51,4 @@ export function orderRefundableRemaining(
   const total = decimalToNumber(totalAmount);
   const refunded = decimalToNumber(refundedAmount);
   return maxNetRefundableRemaining(total, refunded);
-}
-
-export function refundPolicyShortText(): string {
-  return `Refunds are available only within ${REFUND_WINDOW_HOURS} hours of payment. A ${PLATFORM_REFUND_FEE_PERCENT}% platform charge is deducted; the balance is refunded to you.`;
-}
-
-export function refundPolicyPaymentBullet(): string {
-  return `Refunds within ${REFUND_WINDOW_HOURS} hours only (${PLATFORM_REFUND_FEE_PERCENT}% platform fee on approved refunds — see Privacy Policy)`;
 }

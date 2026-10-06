@@ -16,6 +16,7 @@ export function PublicNavbar() {
     { href: "/", label: "Home" },
     { href: "/notes", label: "Notes" },
     { href: "/privacy", label: "Privacy" },
+    { href: "/terms", label: "Terms" },
   ];
 
   return (

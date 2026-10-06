@@ -10,7 +10,10 @@ export function SiteFooter() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
           <Link href="/privacy" className="font-medium text-slate-600 hover:text-indigo-600">
-            Privacy &amp; refunds
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className="font-medium text-slate-600 hover:text-indigo-600">
+            Terms &amp; Conditions
           </Link>
           <a href={`mailto:${brand.supportEmail}`} className="text-slate-500 hover:text-indigo-600">
             {brand.supportEmail}

@@ -11,11 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { readJsonResponse } from "@/lib/api/fetch-json";
+import { LegalAcceptance } from "@/components/legal/legal-acceptance";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any>(null);
   const [coupon, setCoupon] = useState("");
   const [loading, setLoading] = useState(true);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const router = useRouter();
   const { status } = useSession();
 
@@ -65,7 +67,16 @@ export default function CartPage() {
   }
 
   async function checkout() {
-    const res = await fetch("/api/checkout", { method: "POST", credentials: "include" });
+    if (!acceptedLegal) {
+      toast.error("Please accept the Terms & Conditions and Privacy Policy");
+      return;
+    }
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acceptedLegal: true }),
+    });
     const data = await readJsonResponse(res);
     if (!res.ok) return toast.error(typeof data.error === "string" ? data.error : "Checkout failed");
 
@@ -154,7 +165,12 @@ export default function CartPage() {
               <span>Total</span>
               <span>{formatCurrency(cart?.total ?? 0)}</span>
             </div>
-            <Button className="w-full" disabled={!cart?.items?.length} onClick={checkout}>
+            <LegalAcceptance checked={acceptedLegal} onCheckedChange={setAcceptedLegal} id="cart-accept-legal" />
+            <Button
+              className="w-full"
+              disabled={!cart?.items?.length || !acceptedLegal}
+              onClick={checkout}
+            >
               Proceed to Checkout
             </Button>
           </CardContent>

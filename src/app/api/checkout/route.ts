@@ -12,6 +12,17 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   try {
+    const body = (await req.json().catch(() => ({}))) as { acceptedLegal?: boolean };
+    if (!body.acceptedLegal) {
+      return NextResponse.json(
+        {
+          error:
+            "You must accept the Terms & Conditions and Privacy Policy before checkout.",
+        },
+        { status: 400 }
+      );
+    }
+
     const baseUrl = resolveAppBaseUrl(req);
     const result = await createCheckoutOrder(
       user.id,

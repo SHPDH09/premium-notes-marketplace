@@ -13,7 +13,7 @@ import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand } from "@/config/brand";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { refundPolicyPaymentBullet } from "@/lib/refund-policy";
+import { LegalAcceptance } from "@/components/legal/legal-acceptance";
 
 export default function NotePaymentPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +21,7 @@ export default function NotePaymentPage() {
   const router = useRouter();
   const [note, setNote] = useState<any>(null);
   const [paying, setPaying] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   useEffect(() => {
     fetch(`/api/notes/${id}`)
@@ -38,6 +39,11 @@ export default function NotePaymentPage() {
       return;
     }
 
+    if (!acceptedLegal) {
+      toast.error("Please accept the Terms & Conditions and Privacy Policy");
+      return;
+    }
+
     setPaying(true);
     const prep = await fetch("/api/cart/buy-now", {
       method: "POST",
@@ -52,7 +58,12 @@ export default function NotePaymentPage() {
       return;
     }
 
-    const res = await fetch("/api/checkout", { method: "POST", credentials: "include" });
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ acceptedLegal: true }),
+    });
     const data = await res.json();
     setPaying(false);
 
@@ -111,21 +122,24 @@ export default function NotePaymentPage() {
               <li>Instant access to full PDF after successful payment</li>
               <li>No duplicate charges — owned forever in your library</li>
               <li>Prices verified server-side (secure checkout)</li>
-              <li>{refundPolicyPaymentBullet()}</li>
             </ul>
-            <p className="text-xs text-slate-500">
-              By paying, you agree to our{" "}
-              <Link href="/privacy" className="font-medium text-indigo-600 hover:underline">
-                Privacy Policy &amp; refund terms
-              </Link>
-              .
-            </p>
+            <LegalAcceptance
+              checked={acceptedLegal}
+              onCheckedChange={setAcceptedLegal}
+              id="payment-accept-legal"
+              disabled={paying}
+            />
             {note.owned ? (
               <Button asChild className="w-full">
                 <Link href="/purchases">Already unlocked — open notes</Link>
               </Button>
             ) : (
-              <Button className="w-full" size="lg" disabled={paying} onClick={payAndUnlock}>
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={paying || !acceptedLegal}
+                onClick={payAndUnlock}
+              >
                 {paying ? "Processing..." : `Pay & unlock — ${formatCurrency(note.finalPrice)}`}
               </Button>
             )}
