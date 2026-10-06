@@ -98,6 +98,8 @@ Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to your **live site URL** (custom d
 
 **Cashfree:** In [merchant.cashfree.com](https://merchant.cashfree.com) → **Developers**, whitelist every domain you use (e.g. `https://www.techlaunchpad.in` and `https://premium-notes-marketplace.vercel.app`). Without whitelisting, checkout shows “Broken Link / domain not enabled”.
 
+**Checkout shows wrong name (e.g. Quantronsoft on UPI scan):** That text comes from your **Cashfree merchant business profile**, not from this repo. Update it in the Cashfree dashboard: **Payment Gateway → One Click Checkout → Customisation → Visual Customisation** (brand name + logo). For the **UPI QR payee name**, change **Account / Business → Trade or brand name** to **TechLaunchpad**, or contact Cashfree support to update the QR display name. Optional env: `PAYMENT_MERCHANT_LABEL=TechLaunchpad` (order note/tags on each payment).
+
 ### Sync env vars with Vercel CLI
 
 This agent runtime does **not** receive your Vercel token unless you add it as a Cloud Agent secret. To push variables in one step locally or in a trusted CI job:

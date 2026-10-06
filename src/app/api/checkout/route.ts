@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
       user.id,
       user.email,
       user.phone ?? undefined,
-      baseUrl
+      baseUrl,
+      user.name
     );
     return NextResponse.json(result);
   } catch (e) {

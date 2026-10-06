@@ -9,7 +9,8 @@ export async function createCheckoutOrder(
   userId: string,
   userEmail: string,
   userPhone?: string,
-  appBaseUrl?: string
+  appBaseUrl?: string,
+  customerName?: string
 ) {
   const cart = await getCartSummary(userId);
   if (cart.items.length === 0) {
@@ -91,6 +92,7 @@ export async function createCheckoutOrder(
     customerId: userId,
     customerEmail: userEmail,
     customerPhone: userPhone,
+    customerName,
     returnUrl: `${baseUrl}/checkout/success?order_id=${order.id}`,
     notifyUrl: `${baseUrl}/api/payments/webhook`,
   });

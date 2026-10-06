@@ -1,3 +1,5 @@
+import { getPaymentBrandLabel } from "@/lib/payment/brand-label";
+
 const CASHFREE_API =
   process.env.CASHFREE_ENV === "production"
     ? "https://api.cashfree.com/pg"
@@ -21,9 +23,11 @@ export async function createCashfreeOrder(params: {
   customerId: string;
   customerEmail: string;
   customerPhone?: string;
+  customerName?: string;
   returnUrl: string;
   notifyUrl: string;
 }): Promise<{ paymentSessionId: string; cfOrderId: string }> {
+  const brand = getPaymentBrandLabel();
   const res = await fetch(`${CASHFREE_API}/orders`, {
     method: "POST",
     headers: headers(),
@@ -31,10 +35,16 @@ export async function createCashfreeOrder(params: {
       order_id: params.orderId,
       order_amount: params.amount,
       order_currency: "INR",
+      order_note: `${brand} — premium notes purchase`,
+      order_tags: {
+        brand,
+        store: "techlaunchpad",
+      },
       customer_details: {
         customer_id: params.customerId,
         customer_email: params.customerEmail,
         customer_phone: params.customerPhone ?? "9999999999",
+        customer_name: params.customerName ?? brand,
       },
       order_meta: {
         return_url: params.returnUrl,

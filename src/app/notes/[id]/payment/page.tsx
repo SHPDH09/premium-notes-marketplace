@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { NotePreviewPanel } from "@/components/notes/note-preview-panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { brand } from "@/config/brand";
 
 export default function NotePaymentPage() {
   const { id } = useParams<{ id: string }>();
@@ -81,7 +82,7 @@ export default function NotePaymentPage() {
       <PublicNavbar />
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
         <div>
-          <p className="text-sm font-medium text-indigo-600">Secure unlock</p>
+          <p className="text-sm font-medium text-indigo-600">Pay {brand.name}</p>
           <h1 className="text-2xl font-bold text-slate-900">{note.title}</h1>
           <p className="mt-1 text-slate-600">
             First {note.freePreviewPages ?? 2} pages are free. Complete payment to unlock all pages permanently.
@@ -100,6 +101,7 @@ export default function NotePaymentPage() {
               <span className="text-indigo-600">{formatCurrency(note.finalPrice)}</span>
             </div>
             <ul className="list-inside list-disc text-sm text-slate-600">
+              <li>Payment to <strong>{brand.name}</strong> (secure Cashfree checkout)</li>
               <li>Instant access to full PDF after successful payment</li>
               <li>No duplicate charges — owned forever in your library</li>
               <li>Prices verified server-side (secure checkout)</li>

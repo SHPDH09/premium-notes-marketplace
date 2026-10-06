@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -44,13 +46,11 @@ export default function RegisterPage() {
     });
     setLoading(false);
     toast.success("Account created successfully");
-    router.push("/dashboard");
+    router.push(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
+    router.refresh();
   }
 
   return (
-    <div>
-      <PublicNavbar />
-      <div className="mx-auto flex max-w-md px-4 py-16">
         <Card className="w-full">
           <CardHeader>
             <CardTitle>Create Student Account</CardTitle>
@@ -78,10 +78,24 @@ export default function RegisterPage() {
               </Button>
             </form>
             <p className="mt-4 text-center text-sm text-slate-500">
-              Already registered? <Link href="/login" className="text-indigo-600">Login</Link>
+              Already registered?{" "}
+              <Link href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-indigo-600">
+                Login
+              </Link>
             </p>
           </CardContent>
         </Card>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <div>
+      <PublicNavbar />
+      <div className="mx-auto flex max-w-md px-4 py-16">
+        <Suspense fallback={<Card className="w-full p-8 text-center text-slate-500">Loading...</Card>}>
+          <RegisterForm />
+        </Suspense>
       </div>
     </div>
   );
