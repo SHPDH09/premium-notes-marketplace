@@ -94,7 +94,9 @@ npm run dev
    - `npx prisma migrate deploy` (from CI or local with production `DATABASE_URL`)
 5. Run seed once: `npm run db:seed` with production env vars.
 
-Set `NEXT_PUBLIC_APP_URL` to your Vercel domain and configure Cashfree webhook/return URLs accordingly.
+Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to your **live site URL** (custom domain or Vercel URL). They must match the domain students use in the browser, or login/cart cookies will not work.
+
+**Cashfree:** In [merchant.cashfree.com](https://merchant.cashfree.com) → **Developers**, whitelist every domain you use (e.g. `https://www.techlaunchpad.in` and `https://premium-notes-marketplace.vercel.app`). Without whitelisting, checkout shows “Broken Link / domain not enabled”.
 
 ### Sync env vars with Vercel CLI
 

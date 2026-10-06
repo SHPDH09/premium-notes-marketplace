@@ -41,11 +41,12 @@ export function NoteCard({
 
   async function addToCart() {
     if (!session) {
-      router.push("/login");
+      router.push(`/login?callbackUrl=${encodeURIComponent("/cart")}`);
       return;
     }
     const res = await fetch("/api/cart", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ noteId: note.id }),
     });
@@ -57,9 +58,13 @@ export function NoteCard({
     toast.success("Note added to cart");
   }
 
-  async function buyNow() {
-    await addToCart();
-    router.push("/cart");
+  function buyNow() {
+    const paymentUrl = `/notes/${note.id}/payment`;
+    if (!session) {
+      router.push(`/login?callbackUrl=${encodeURIComponent(paymentUrl)}`);
+      return;
+    }
+    router.push(paymentUrl);
   }
 
   return (

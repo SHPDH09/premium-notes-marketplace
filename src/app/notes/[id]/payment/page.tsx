@@ -36,13 +36,20 @@ export default function NotePaymentPage() {
     }
 
     setPaying(true);
-    await fetch("/api/cart", {
+    const prep = await fetch("/api/cart/buy-now", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ noteId: id }),
     });
+    const prepData = await prep.json().catch(() => ({}));
+    if (!prep.ok) {
+      setPaying(false);
+      toast.error(prepData.error ?? "Could not start checkout");
+      return;
+    }
 
-    const res = await fetch("/api/checkout", { method: "POST" });
+    const res = await fetch("/api/checkout", { method: "POST", credentials: "include" });
     const data = await res.json();
     setPaying(false);
 

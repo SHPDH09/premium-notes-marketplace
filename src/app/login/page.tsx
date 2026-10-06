@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -31,36 +33,48 @@ export default function LoginPage() {
       return;
     }
     toast.success("Welcome back!");
-    router.push("/dashboard");
+    router.push(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
+    router.refresh();
   }
 
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Student Login</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" name="email" type="email" required />
+          </div>
+          <div>
+            <Label htmlFor="password">Password</Label>
+            <Input id="password" name="password" type="password" required />
+          </div>
+          <Button className="w-full" disabled={loading}>
+            {loading ? "Signing in..." : "Login"}
+          </Button>
+        </form>
+        <p className="mt-4 text-center text-sm text-slate-500">
+          No account?{" "}
+          <Link href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-indigo-600">
+            Register
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function LoginPage() {
   return (
     <div>
       <PublicNavbar />
       <div className="mx-auto flex max-w-md px-4 py-16">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Student Login</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" required />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" required />
-              </div>
-              <Button className="w-full" disabled={loading}>
-                {loading ? "Signing in..." : "Login"}
-              </Button>
-            </form>
-            <p className="mt-4 text-center text-sm text-slate-500">
-              No account? <Link href="/register" className="text-indigo-600">Register</Link>
-            </p>
-          </CardContent>
-        </Card>
+        <Suspense fallback={<Card className="w-full p-8 text-center text-slate-500">Loading...</Card>}>
+          <LoginForm />
+        </Suspense>
       </div>
     </div>
   );

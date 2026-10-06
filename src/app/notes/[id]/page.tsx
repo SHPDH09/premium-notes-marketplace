@@ -28,9 +28,13 @@ export default function NoteDetailPage() {
   }, [id]);
 
   async function addToCart() {
-    if (!session) return router.push("/login");
+    if (!session) {
+      router.push(`/login?callbackUrl=${encodeURIComponent(`/notes/${id}`)}`);
+      return;
+    }
     const res = await fetch("/api/cart", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ noteId: id }),
     });
@@ -96,14 +100,8 @@ export default function NoteDetailPage() {
                 <Button variant="outline" asChild>
                   <Link href={`/notes/${id}/payment`}>Pay & Unlock Full PDF</Link>
                 </Button>
-                <Button
-                  variant="secondary"
-                  onClick={async () => {
-                    await addToCart();
-                    router.push("/cart");
-                  }}
-                >
-                  Buy Now
+                <Button variant="secondary" asChild>
+                  <Link href={`/notes/${id}/payment`}>Buy Now</Link>
                 </Button>
               </>
             )}

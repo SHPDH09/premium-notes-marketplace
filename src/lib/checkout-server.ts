@@ -5,7 +5,12 @@ import { roundMoney } from "@/lib/pricing";
 import { generatePaymentOrderId } from "@/lib/orders";
 import { createCashfreeOrder } from "@/lib/payment/cashfree";
 
-export async function createCheckoutOrder(userId: string, userEmail: string, userPhone?: string) {
+export async function createCheckoutOrder(
+  userId: string,
+  userEmail: string,
+  userPhone?: string,
+  appBaseUrl?: string
+) {
   const cart = await getCartSummary(userId);
   if (cart.items.length === 0) {
     throw new Error("Your cart is empty.");
@@ -56,7 +61,10 @@ export async function createCheckoutOrder(userId: string, userEmail: string, use
     include: { items: true },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl =
+    appBaseUrl?.replace(/\/$/, "") ??
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+    "http://localhost:3000";
 
   if (cart.total <= 0) {
     const { fulfillSuccessfulOrder } = await import("@/lib/orders");

@@ -2,34 +2,51 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { StudentShell } from "@/components/layout/student-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { readJsonResponse } from "@/lib/api/fetch-json";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any>(null);
   const [coupon, setCoupon] = useState("");
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { status } = useSession();
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/cart");
-    const data = await res.json();
+    const res = await fetch("/api/cart", { credentials: "include", cache: "no-store" });
+    const data = await readJsonResponse(res);
+    if (res.status === 401) {
+      router.replace(`/login?callbackUrl=${encodeURIComponent("/cart")}`);
+      return;
+    }
+    if (!res.ok) {
+      toast.error(typeof data.error === "string" ? data.error : "Could not load cart");
+      setLoading(false);
+      return;
+    }
     setCart(data);
     setLoading(false);
   }
 
   useEffect(() => {
-    load();
-  }, []);
+    if (status === "loading") return;
+    if (status === "unauthenticated") {
+      router.replace(`/login?callbackUrl=${encodeURIComponent("/cart")}`);
+      return;
+    }
+    void load();
+  }, [status, router]);
 
   async function remove(noteId: string) {
-    await fetch(`/api/cart?noteId=${noteId}`, { method: "DELETE" });
+    await fetch(`/api/cart?noteId=${noteId}`, { method: "DELETE", credentials: "include" });
     toast.success("Removed from cart");
     load();
   }
@@ -37,19 +54,20 @@ export default function CartPage() {
   async function applyCoupon() {
     const res = await fetch("/api/cart/coupon", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "apply", code: coupon }),
     });
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error);
+    const data = await readJsonResponse(res);
+    if (!res.ok) return toast.error(typeof data.error === "string" ? data.error : "Invalid coupon");
     toast.success("Coupon applied");
     setCart(data.summary);
   }
 
   async function checkout() {
-    const res = await fetch("/api/checkout", { method: "POST" });
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error ?? "Checkout failed");
+    const res = await fetch("/api/checkout", { method: "POST", credentials: "include" });
+    const data = await readJsonResponse(res);
+    if (!res.ok) return toast.error(typeof data.error === "string" ? data.error : "Checkout failed");
 
     if (data.free) {
       toast.success("Note purchased successfully.");
@@ -57,7 +75,9 @@ export default function CartPage() {
       return;
     }
 
-    router.push(`/checkout/pay?session=${encodeURIComponent(data.paymentSessionId)}&order=${data.orderId}`);
+    router.push(
+      `/checkout/pay?session=${encodeURIComponent(data.paymentSessionId as string)}&order=${data.orderId}`
+    );
   }
 
   return (
@@ -120,6 +140,7 @@ export default function CartPage() {
                 onClick={async () => {
                   await fetch("/api/cart/coupon", {
                     method: "POST",
+                    credentials: "include",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ action: "remove" }),
                   });

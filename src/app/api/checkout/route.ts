@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requireStudent } from "@/lib/api/auth-helpers";
 import { createCheckoutOrder } from "@/lib/checkout-server";
 import { prisma } from "@/lib/db";
+import { resolveAppBaseUrl } from "@/lib/app-url";
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const auth = await requireStudent();
   if (auth.error) return auth.error;
 
@@ -11,7 +12,13 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   try {
-    const result = await createCheckoutOrder(user.id, user.email, user.phone ?? undefined);
+    const baseUrl = resolveAppBaseUrl(req);
+    const result = await createCheckoutOrder(
+      user.id,
+      user.email,
+      user.phone ?? undefined,
+      baseUrl
+    );
     return NextResponse.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Checkout failed";

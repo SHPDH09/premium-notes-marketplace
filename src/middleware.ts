@@ -35,6 +35,9 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
         if (path.startsWith("/admin/login")) return true;
+        if (path.startsWith("/login") || path.startsWith("/register")) return true;
+        if (path.startsWith("/checkout")) return true;
+        if (path.startsWith("/notes/") && path.endsWith("/payment")) return true;
         if (
           path.startsWith("/admin") ||
           path.startsWith("/dashboard") ||
