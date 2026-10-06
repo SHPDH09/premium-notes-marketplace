@@ -11,7 +11,8 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { NotePreviewPanel } from "@/components/notes/note-preview-panel";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { refundPolicyPaymentBullet } from "@/lib/refund-policy";
 
 export default function NoteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,6 +80,12 @@ export default function NoteDetailPage() {
           {note.discountPercentage > 0 && <Badge>{note.discountPercentage}% OFF</Badge>}
           <h1 className="text-3xl font-bold text-slate-900">{note.title}</h1>
           <p className="text-slate-600">{note.description}</p>
+          <p className="text-xs text-slate-500">
+            {refundPolicyPaymentBullet()}.{" "}
+            <Link href="/privacy#refunds" className="font-medium text-indigo-600 hover:underline">
+              Privacy &amp; refunds
+            </Link>
+          </p>
           <div className="flex items-end gap-3">
             <span className="text-3xl font-bold text-indigo-600">{formatCurrency(note.finalPrice)}</span>
             {note.price > note.finalPrice && (
@@ -108,12 +115,7 @@ export default function NoteDetailPage() {
           </div>
         </div>
       </div>
-      {note.previewAvailable && (
-        <div className="mx-auto max-w-6xl px-4 pb-16">
-          <h2 className="mb-4 text-xl font-bold text-slate-900">Read preview</h2>
-          <NotePreviewPanel noteId={id} />
-        </div>
-      )}
+      <SiteFooter />
     </div>
   );
 }

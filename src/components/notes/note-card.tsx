@@ -9,13 +9,6 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
-
-const NotePreviewPanel = dynamic(
-  () => import("@/components/notes/note-preview-panel").then((m) => m.NotePreviewPanel),
-  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-xl bg-slate-100" /> }
-);
-
 export type PublicNote = {
   id: string;
   title: string;
@@ -29,13 +22,7 @@ export type PublicNote = {
   freePreviewPages?: number;
 };
 
-export function NoteCard({
-  note,
-  showPdfPreview = false,
-}: {
-  note: PublicNote;
-  showPdfPreview?: boolean;
-}) {
+export function NoteCard({ note }: { note: PublicNote }) {
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -80,16 +67,8 @@ export function NoteCard({
         )}
       </div>
       <CardContent className="space-y-4 p-5">
-        {showPdfPreview && note.previewAvailable && !note.owned && (
-          <NotePreviewPanel noteId={note.id} compact />
-        )}
         <div>
           <h3 className="line-clamp-1 text-lg font-semibold text-slate-900">{note.title}</h3>
-          {showPdfPreview && note.previewAvailable && !note.owned && (
-            <p className="mt-1 text-xs font-medium text-indigo-600">
-              {note.freePreviewPages ?? 2} pages free · rest locked until payment
-            </p>
-          )}
           <p className="mt-1 line-clamp-2 text-sm text-slate-500">{note.description}</p>
         </div>
         <div className="flex items-end gap-2">

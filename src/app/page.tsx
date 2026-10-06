@@ -9,6 +9,8 @@ import { serializeNotePublic } from "@/lib/serializers";
 import { BookOpen, ShieldCheck, Sparkles, GraduationCap } from "lucide-react";
 import { CollaboratorsSection } from "@/components/home/collaborators-section";
 import { StudentSpotlightsSection } from "@/components/home/student-spotlights-section";
+import { PolicyNotice } from "@/components/home/policy-notice";
+import { HorizontalScrollRow } from "@/components/ui/horizontal-marquee";
 
 export const dynamic = "force-dynamic";
 
@@ -83,15 +85,19 @@ export default async function HomePage() {
               <Link href="/notes">View all</Link>
             </Button>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <HorizontalScrollRow className="px-1">
             {featured.length ? (
-              featured.map((note) => <NoteCard key={note.id} note={note} showPdfPreview />)
+              featured.map((note) => (
+                <div key={note.id} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
+                  <NoteCard note={note} />
+                </div>
+              ))
             ) : (
-              <p className="col-span-full rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-500">
+              <p className="min-w-full rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-500">
                 Notes will appear here once the admin publishes them.
               </p>
             )}
-          </div>
+          </HorizontalScrollRow>
         </section>
 
         <CollaboratorsSection />
@@ -100,11 +106,13 @@ export default async function HomePage() {
         <section className="bg-white py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <h2 className="text-2xl font-bold text-slate-900">Popular Notes</h2>
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <HorizontalScrollRow className="mt-8 px-1">
               {popular.map((note) => (
-                <NoteCard key={`pop-${note.id}`} note={note} />
+                <div key={`pop-${note.id}`} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
+                  <NoteCard note={note} />
+                </div>
               ))}
-            </div>
+            </HorizontalScrollRow>
           </div>
         </section>
 
@@ -136,6 +144,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+        <PolicyNotice />
       </main>
       <SiteFooter />
     </div>

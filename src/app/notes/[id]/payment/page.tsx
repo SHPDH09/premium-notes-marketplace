@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { NotePreviewPanel } from "@/components/notes/note-preview-panel";
+import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brand } from "@/config/brand";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -87,11 +87,15 @@ export default function NotePaymentPage() {
           <p className="text-sm font-medium text-indigo-600">Pay {brand.name}</p>
           <h1 className="text-2xl font-bold text-slate-900">{note.title}</h1>
           <p className="mt-1 text-slate-600">
-            First {note.freePreviewPages ?? 2} pages are free. Complete payment to unlock all pages permanently.
+            Complete payment to unlock the full PDF permanently in your library.
           </p>
         </div>
 
-        <NotePreviewPanel noteId={id} />
+        {note.coverImage ? (
+          <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <Image src={note.coverImage} alt={note.title} fill className="object-cover" />
+          </div>
+        ) : null}
 
         <Card>
           <CardHeader>
