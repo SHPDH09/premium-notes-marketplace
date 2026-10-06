@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { serializeNoteAdmin } from "@/lib/serializers";
 import { calculateFinalPrice } from "@/lib/pricing";
 import { uploadFile, validateImageFile, validatePdfFile } from "@/lib/storage";
+import { processNotePdfUpload } from "@/lib/process-note-pdf";
 import { DiscountType, NoteStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
   const discountType = (String(form.get("discountType") ?? "PERCENTAGE") as DiscountType);
   const discountValue = parseFloat(String(form.get("discountValue") ?? "0"));
   const status = (String(form.get("status") ?? "ACTIVE") as NoteStatus);
+  const freePreviewPages = parseInt(String(form.get("freePreviewPages") ?? "2"), 10) || 2;
 
   if (!name || !title || !description || Number.isNaN(price)) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -54,6 +56,8 @@ export async function POST(req: NextRequest) {
 
   let coverKey: string | null = null;
   let pdfKey: string | null = null;
+  let pdfPreviewKey: string | null = null;
+  let pdfPageCount: number | null = null;
 
   if (cover instanceof File && cover.size > 0) {
     const err = validateImageFile(cover);
@@ -68,9 +72,11 @@ export async function POST(req: NextRequest) {
     const err = validatePdfFile(pdf);
     if (err) return NextResponse.json({ error: err }, { status: 400 });
     const buf = Buffer.from(await pdf.arrayBuffer());
-    const uploaded = await uploadFile(buf, pdf.type, "pdfs");
-    if (uploaded.error) return NextResponse.json({ error: uploaded.error }, { status: 500 });
-    pdfKey = uploaded.key;
+    const processed = await processNotePdfUpload(buf, freePreviewPages);
+    if ("error" in processed) return NextResponse.json({ error: processed.error }, { status: 500 });
+    pdfKey = processed.fullKey;
+    pdfPreviewKey = processed.previewKey;
+    pdfPageCount = processed.pageCount || null;
   }
 
   if (!pdfKey && !notesLink) {
@@ -86,6 +92,9 @@ export async function POST(req: NextRequest) {
       description,
       coverImage: coverKey,
       pdfStorageKey: pdfKey,
+      pdfPreviewStorageKey: pdfPreviewKey,
+      freePreviewPages,
+      pdfPageCount,
       notesLink,
       price,
       discountType,

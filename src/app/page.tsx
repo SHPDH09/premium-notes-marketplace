@@ -83,7 +83,9 @@ export default async function HomePage() {
             </Button>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.length ? featured.map((note) => <NoteCard key={note.id} note={note} />) : (
+            {featured.length ? (
+              featured.map((note) => <NoteCard key={note.id} note={note} showPdfPreview />)
+            ) : (
               <p className="col-span-full rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-500">
                 Notes will appear here once the admin publishes them.
               </p>

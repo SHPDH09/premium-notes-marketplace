@@ -98,8 +98,11 @@ model Note {
   coverImage    String?      @map("cover_image")
   title         String
   description   String       @db.Text
-  pdfStorageKey String?      @map("pdf_storage_key")
-  notesLink     String?      @map("notes_link")
+  pdfStorageKey        String? @map("pdf_storage_key")
+  pdfPreviewStorageKey String? @map("pdf_preview_storage_key")
+  freePreviewPages     Int     @default(2) @map("free_preview_pages")
+  pdfPageCount         Int?    @map("pdf_page_count")
+  notesLink            String? @map("notes_link")
   price         Decimal      @db.Decimal(10, 2)
   discountType  DiscountType @default(PERCENTAGE) @map("discount_type")
   discountValue Decimal      @default(0) @map("discount_value") @db.Decimal(10, 2)

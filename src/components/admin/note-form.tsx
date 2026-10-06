@@ -26,6 +26,7 @@ export function NoteForm({ mode, noteId, initial }: Props) {
     discountType: initial?.discountType ?? "PERCENTAGE",
     discountValue: initial?.discountValue ?? 0,
     status: initial?.status ?? "ACTIVE",
+    freePreviewPages: initial?.freePreviewPages ?? 2,
   });
   const [cover, setCover] = useState<File | null>(null);
   const [pdf, setPdf] = useState<File | null>(null);
@@ -123,16 +124,28 @@ export function NoteForm({ mode, noteId, initial }: Props) {
           <Input value={finalPreview.toFixed(2)} disabled />
         </div>
       </div>
-      <div>
-        <Label>Status</Label>
-        <select
-          className="h-11 w-full rounded-xl border px-3 text-sm"
-          value={form.status}
-          onChange={(e) => setForm({ ...form, status: e.target.value })}
-        >
-          <option value="ACTIVE">Active</option>
-          <option value="DISABLED">Disabled</option>
-        </select>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <Label>Free preview pages (home & unlock)</Label>
+          <Input
+            type="number"
+            min={1}
+            max={50}
+            value={form.freePreviewPages}
+            onChange={(e) => setForm({ ...form, freePreviewPages: Number(e.target.value) })}
+          />
+        </div>
+        <div>
+          <Label>Status</Label>
+          <select
+            className="h-11 w-full rounded-xl border px-3 text-sm"
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
+          >
+            <option value="ACTIVE">Active</option>
+            <option value="DISABLED">Disabled</option>
+          </select>
+        </div>
       </div>
       <Button disabled={loading}>{loading ? "Saving..." : mode === "create" ? "Create Note" : "Update Note"}</Button>
     </form>

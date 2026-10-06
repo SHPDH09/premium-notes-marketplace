@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { serializeNoteAdmin } from "@/lib/serializers";
 import { calculateFinalPrice } from "@/lib/pricing";
 import { deleteStoredFile, uploadFile, validateImageFile, validatePdfFile } from "@/lib/storage";
+import { processNotePdfUpload } from "@/lib/process-note-pdf";
 import { DiscountType, NoteStatus } from "@prisma/client";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -46,9 +47,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const discountType = String(form.get("discountType") ?? existing.discountType) as DiscountType;
   const discountValue = parseFloat(String(form.get("discountValue") ?? existing.discountValue.toString()));
   const status = String(form.get("status") ?? existing.status) as NoteStatus;
+  const freePreviewPages = parseInt(
+    String(form.get("freePreviewPages") ?? existing.freePreviewPages ?? "2"),
+    10
+  ) || 2;
 
   let coverKey = existing.coverImage;
   let pdfKey = existing.pdfStorageKey;
+  let pdfPreviewKey = existing.pdfPreviewStorageKey;
+  let pdfPageCount = existing.pdfPageCount;
 
   const cover = form.get("cover");
   if (cover instanceof File && cover.size > 0) {
@@ -66,10 +73,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const err = validatePdfFile(pdf);
     if (err) return NextResponse.json({ error: err }, { status: 400 });
     const buf = Buffer.from(await pdf.arrayBuffer());
-    const uploaded = await uploadFile(buf, pdf.type, "pdfs");
-    if (uploaded.error) return NextResponse.json({ error: uploaded.error }, { status: 500 });
     if (existing.pdfStorageKey) await deleteStoredFile(existing.pdfStorageKey);
-    pdfKey = uploaded.key;
+    const processed = await processNotePdfUpload(buf, freePreviewPages, existing.pdfPreviewStorageKey);
+    if ("error" in processed) return NextResponse.json({ error: processed.error }, { status: 500 });
+    pdfKey = processed.fullKey;
+    pdfPreviewKey = processed.previewKey;
+    pdfPageCount = processed.pageCount || null;
   }
 
   if (!pdfKey && !notesLink) {
@@ -86,6 +95,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       description,
       coverImage: coverKey,
       pdfStorageKey: pdfKey,
+      pdfPreviewStorageKey: pdfPreviewKey,
+      freePreviewPages,
+      pdfPageCount,
       notesLink,
       price,
       discountType,
@@ -108,6 +120,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   await prisma.note.delete({ where: { id: params.id } });
   if (note.coverImage) await deleteStoredFile(note.coverImage);
   if (note.pdfStorageKey) await deleteStoredFile(note.pdfStorageKey);
+  if (note.pdfPreviewStorageKey) await deleteStoredFile(note.pdfPreviewStorageKey);
 
   return NextResponse.json({ ok: true });
 }

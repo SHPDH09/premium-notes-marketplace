@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NotePreviewPanel } from "@/components/notes/note-preview-panel";
 
 export default function NoteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,8 +93,11 @@ export default function NoteDetailPage() {
             ) : (
               <>
                 <Button onClick={addToCart}>Add to Cart</Button>
+                <Button variant="outline" asChild>
+                  <Link href={`/notes/${id}/payment`}>Pay & Unlock Full PDF</Link>
+                </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={async () => {
                     await addToCart();
                     router.push("/cart");
@@ -106,6 +110,12 @@ export default function NoteDetailPage() {
           </div>
         </div>
       </div>
+      {note.previewAvailable && (
+        <div className="mx-auto max-w-6xl px-4 pb-16">
+          <h2 className="mb-4 text-xl font-bold text-slate-900">Read preview</h2>
+          <NotePreviewPanel noteId={id} />
+        </div>
+      )}
     </div>
   );
 }
