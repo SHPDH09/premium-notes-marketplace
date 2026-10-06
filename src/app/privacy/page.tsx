@@ -31,16 +31,20 @@ export default function PrivacyPolicyPage() {
       subtitle="How we protect your data when you learn with us — and how refunds work for digital notes."
       nav={nav}
     >
-      <LegalSection id="intro">
+      <LegalSection id="intro" title="Introduction">
         <p>
-          {brand.name} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) operates {brand.supportEmail} and this website to sell
-          digital study notes. This Privacy Policy explains what personal data we collect, why we use it, and your
+          {brand.name} (&ldquo;we&rdquo;, &ldquo;us&rdquo;) operates this website to sell digital study notes to
+          registered students. This Privacy Policy explains what personal data we collect, why we use it, and your
           choices. By creating an account or making a payment, you also agree to our{" "}
           <Link href="/terms">Terms &amp; Conditions</Link>.
         </p>
+        <p>
+          For privacy, refunds, or support, contact us at{" "}
+          <a href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</a>.
+        </p>
       </LegalSection>
 
-      <LegalSection id="data">
+      <LegalSection id="data" title="Information we collect">
         <ul>
           <li>
             <strong>Account data:</strong> name, email, optional phone, password (stored securely hashed).
@@ -57,7 +61,7 @@ export default function PrivacyPolicyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="use">
+      <LegalSection id="use" title="How we use your information">
         <ul>
           <li>Deliver purchased notes and manage your student library.</li>
           <li>Process payments and refunds through our payment partner.</li>
@@ -67,7 +71,7 @@ export default function PrivacyPolicyPage() {
         </ul>
       </LegalSection>
 
-      <LegalSection id="payments">
+      <LegalSection id="payments" title="Payments">
         <p>
           Payments are processed by <strong>Cashfree</strong> (or other gateways we enable). We do not store full
           card numbers or UPI PINs. Prices, discounts, and coupons are validated on our servers before checkout.
@@ -80,14 +84,14 @@ export default function PrivacyPolicyPage() {
 
       <RefundHighlightCard />
 
-      <LegalSection id="refunds-detail">
+      <LegalSection id="refunds-detail" title="Refund details">
         <p>{refundPolicyParagraphs.withinWindow}</p>
         <p>{refundPolicyParagraphs.afterWindow}</p>
         <p>{refundPolicyParagraphs.partialRefunds}</p>
         <p>{refundPolicyParagraphs.howToRequest}</p>
       </LegalSection>
 
-      <LegalSection id="sharing">
+      <LegalSection id="sharing" title="Data sharing">
         <p>
           We share data only with trusted providers (hosting, database, file storage, payment processing) under
           contracts that require them to protect your information. We do <strong>not</strong> sell your personal
@@ -95,7 +99,7 @@ export default function PrivacyPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="rights">
+      <LegalSection id="rights" title="Your rights">
         <p>
           You may update your profile, change your password, or request deletion of your account by emailing{" "}
           <a href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</a>. You may request a copy of personal data
@@ -103,7 +107,7 @@ export default function PrivacyPolicyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection id="contact">
+      <LegalSection id="contact" title="Contact">
         <p>
           Privacy or refund questions:{" "}
           <a href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</a>
