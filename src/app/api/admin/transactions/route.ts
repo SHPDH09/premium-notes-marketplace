@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
 import { decimalToNumber } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
+import { resolveRefundReason } from "@/lib/refund-reason";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin();
@@ -65,6 +66,7 @@ export async function GET(req: NextRequest) {
       paymentStatus: o.paymentStatus,
       transactionStatus: o.transactionStatus,
       adminNote: o.adminNote,
+      refundReason: resolveRefundReason(o.refundReason, o.adminNote),
       canRefund: o.paymentStatus === "SUCCESS",
       date: o.createdAt.toISOString(),
     })),

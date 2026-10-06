@@ -34,7 +34,14 @@ export default function TransactionsPage() {
               {items.map((t) => (
                 <tr key={t.orderId} className="border-t">
                   <td className="px-4 py-3 font-mono text-xs">{t.transactionId}</td>
-                  <td className="px-4 py-3">{t.note}</td>
+                  <td className="px-4 py-3">
+                    <div>{t.note}</div>
+                    {t.refundReason ? (
+                      <p className="mt-1 text-xs text-amber-800">
+                        Refund: {t.refundReason}
+                      </p>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3">{t.coupon ?? "-"}</td>
                   <td className="px-4 py-3">{formatCurrency(t.finalAmount)}</td>
                   <td className="px-4 py-3">{t.paymentStatus}</td>

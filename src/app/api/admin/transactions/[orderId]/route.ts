@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
 import { refundOrder } from "@/lib/orders";
+import { formatRefundAdminNote } from "@/lib/refund-reason";
 
 export const runtime = "nodejs";
 
@@ -43,19 +44,25 @@ export async function POST(
 
   try {
     const body = (await req.json().catch(() => ({}))) as { reason?: string };
+    const reason = body.reason?.trim();
+    if (!reason) {
+      return NextResponse.json({ error: "Refund reason is required" }, { status: 400 });
+    }
+
     const result = await refundOrder(params.orderId);
 
-    if (body.reason?.trim()) {
-      const existing = await prisma.order.findUnique({
-        where: { id: params.orderId },
-        select: { adminNote: true },
-      });
-      const prefix = existing?.adminNote ? `${existing.adminNote}\n` : "";
-      await prisma.order.update({
-        where: { id: params.orderId },
-        data: { adminNote: `${prefix}[Refund] ${body.reason.trim()}` },
-      });
-    }
+    const existing = await prisma.order.findUnique({
+      where: { id: params.orderId },
+      select: { adminNote: true },
+    });
+
+    await prisma.order.update({
+      where: { id: params.orderId },
+      data: {
+        refundReason: reason,
+        adminNote: formatRefundAdminNote(reason, existing?.adminNote),
+      },
+    });
 
     return NextResponse.json({
       ok: true,

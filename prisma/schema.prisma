@@ -202,6 +202,7 @@ model Order {
   transactionStatus TransactionStatus @default(PENDING) @map("transaction_status")
   cashfreeOrderId   String?           @unique @map("cashfree_order_id")
   adminNote         String?           @map("admin_note") @db.Text
+  refundReason      String?           @map("refund_reason") @db.Text
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
 
