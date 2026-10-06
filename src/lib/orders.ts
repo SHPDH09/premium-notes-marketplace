@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/db";
 import { randomUUID } from "crypto";
 import { createCashfreeRefund } from "@/lib/payment/cashfree";
+import { formatRefundAdminNote } from "@/lib/refund-reason";
+import { decimalToNumber } from "@/lib/utils";
+import { Prisma } from "@prisma/client";
 
 export async function fulfillSuccessfulOrder(orderId: string, transactionExternalId: string) {
   return prisma.$transaction(async (tx) => {
@@ -75,16 +78,48 @@ export async function fulfillSuccessfulOrder(orderId: string, transactionExterna
   });
 }
 
-export async function refundOrder(orderId: string): Promise<{ gatewayWarning?: string }> {
+function roundMoney(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+export type RefundOrderOptions = {
+  /** Omit to refund all remaining balance. */
+  amount?: number;
+  reason: string;
+};
+
+export async function refundOrder(
+  orderId: string,
+  options: RefundOrderOptions
+): Promise<{ gatewayWarning?: string; refundedAmount: number; fullyRefunded: boolean }> {
+  const reason = options.reason.trim();
+  if (!reason) throw new Error("Refund reason is required");
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { items: true, transaction: true },
   });
   if (!order) throw new Error("Order not found");
-  if (order.paymentStatus === "REFUNDED") throw new Error("Order is already refunded");
-  if (order.paymentStatus !== "SUCCESS") {
+  if (order.paymentStatus === "REFUNDED") throw new Error("Order is already fully refunded");
+  if (order.paymentStatus !== "SUCCESS" && order.paymentStatus !== "PARTIALLY_REFUNDED") {
     throw new Error("Only successful payments can be refunded");
   }
+
+  const total = roundMoney(decimalToNumber(order.totalAmount));
+  const alreadyRefunded = roundMoney(decimalToNumber(order.refundedAmount));
+  const remaining = roundMoney(total - alreadyRefunded);
+  if (remaining <= 0) throw new Error("No refundable balance remaining");
+
+  let refundAmount = options.amount != null ? roundMoney(options.amount) : remaining;
+  if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
+    throw new Error("Refund amount must be greater than zero");
+  }
+  if (refundAmount > remaining + 0.001) {
+    throw new Error(`Refund amount cannot exceed ${remaining.toFixed(2)} (remaining balance)`);
+  }
+  if (refundAmount > remaining) refundAmount = remaining;
+
+  const fullyRefunded = roundMoney(alreadyRefunded + refundAmount) >= total - 0.001;
 
   let gatewayWarning: string | undefined;
   const externalTxnId = order.transaction?.transactionId ?? "";
@@ -98,43 +133,64 @@ export async function refundOrder(orderId: string): Promise<{ gatewayWarning?: s
       await createCashfreeRefund({
         orderId: order.cashfreeOrderId,
         refundId: `ref_${randomUUID().replace(/-/g, "").slice(0, 20)}`,
-        amount: Number(order.totalAmount),
+        amount: refundAmount,
+        note: reason.slice(0, 200),
       });
     } catch (e) {
       gatewayWarning =
-        e instanceof Error ? e.message : "Payment gateway refund failed; marked refunded in app only.";
+        e instanceof Error ? e.message : "Payment gateway refund failed; recorded in app only.";
     }
   }
 
+  const newRefundedTotal = roundMoney(alreadyRefunded + refundAmount);
+  const nextPaymentStatus = fullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED";
+
   await prisma.$transaction(async (tx) => {
-    const purchases = await tx.purchase.findMany({ where: { orderId } });
-    for (const p of purchases) {
-      await tx.note.update({
-        where: { id: p.noteId },
-        data: { purchaseCount: { decrement: 1 } },
-      });
+    await tx.orderRefund.create({
+      data: {
+        orderId,
+        amount: new Prisma.Decimal(refundAmount),
+        reason,
+      },
+    });
+
+    if (fullyRefunded) {
+      const purchases = await tx.purchase.findMany({ where: { orderId } });
+      for (const p of purchases) {
+        await tx.note.update({
+          where: { id: p.noteId },
+          data: { purchaseCount: { decrement: 1 } },
+        });
+      }
+      await tx.purchase.deleteMany({ where: { orderId } });
     }
-    await tx.purchase.deleteMany({ where: { orderId } });
 
     await tx.order.update({
       where: { id: orderId },
       data: {
-        paymentStatus: "REFUNDED",
-        transactionStatus: "REFUNDED",
+        refundedAmount: new Prisma.Decimal(newRefundedTotal),
+        refundReason: reason,
+        adminNote: formatRefundAdminNote(reason, order.adminNote, refundAmount),
+        paymentStatus: nextPaymentStatus,
+        transactionStatus: nextPaymentStatus,
       },
     });
 
     if (order.transaction) {
       await tx.transaction.update({
         where: { orderId },
-        data: { paymentStatus: "REFUNDED" },
+        data: { paymentStatus: nextPaymentStatus },
       });
     }
   });
 
-  return { gatewayWarning };
+  return { gatewayWarning, refundedAmount: refundAmount, fullyRefunded };
 }
 
 export function generatePaymentOrderId(): string {
   return `ord_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+}
+
+export function orderRefundableRemaining(totalAmount: Prisma.Decimal, refundedAmount: Prisma.Decimal): number {
+  return roundMoney(decimalToNumber(totalAmount) - decimalToNumber(refundedAmount));
 }

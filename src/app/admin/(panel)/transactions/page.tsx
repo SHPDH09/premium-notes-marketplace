@@ -11,6 +11,12 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { readJsonResponse } from "@/lib/api/fetch-json";
 
+type RefundEntry = {
+  amount: number;
+  reason: string;
+  createdAt: string;
+};
+
 type TxRow = {
   orderId: string;
   transactionId: string | null;
@@ -23,15 +29,26 @@ type TxRow = {
   transactionStatus: string;
   adminNote: string | null;
   refundReason: string | null;
+  refundedAmount: number;
+  refundableRemaining: number;
+  refunds: RefundEntry[];
   canRefund: boolean;
   date: string;
+};
+
+type RefundDialogState = {
+  orderId: string;
+  reason: string;
+  amount: string;
+  finalAmount: number;
+  refundableRemaining: number;
 };
 
 export default function AdminTransactionsPage() {
   const [items, setItems] = useState<TxRow[]>([]);
   const [q, setQ] = useState("");
   const [noteDialog, setNoteDialog] = useState<{ orderId: string; text: string } | null>(null);
-  const [refundDialog, setRefundDialog] = useState<{ orderId: string; reason: string } | null>(null);
+  const [refundDialog, setRefundDialog] = useState<RefundDialogState | null>(null);
   const [refundingId, setRefundingId] = useState<string | null>(null);
 
   async function load() {
@@ -50,6 +67,16 @@ export default function AdminTransactionsPage() {
     void load();
   }, []);
 
+  function openRefundDialog(t: TxRow) {
+    setRefundDialog({
+      orderId: t.orderId,
+      reason: "",
+      amount: t.refundableRemaining.toFixed(2),
+      finalAmount: t.finalAmount,
+      refundableRemaining: t.refundableRemaining,
+    });
+  }
+
   async function submitRefund() {
     if (!refundDialog) return;
     const reason = refundDialog.reason.trim();
@@ -57,20 +84,38 @@ export default function AdminTransactionsPage() {
       toast.error("Please enter a refund reason");
       return;
     }
+    const amount = Number(refundDialog.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a valid refund amount");
+      return;
+    }
+    if (amount > refundDialog.refundableRemaining + 0.001) {
+      toast.error(`Amount cannot exceed ${formatCurrency(refundDialog.refundableRemaining)}`);
+      return;
+    }
+
     setRefundingId(refundDialog.orderId);
     try {
       const res = await fetch(`/api/admin/transactions/${refundDialog.orderId}`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason, amount }),
       });
-      const data = await readJsonResponse<{ error?: string; warning?: string }>(res);
+      const data = await readJsonResponse<{
+        error?: string;
+        warning?: string;
+        fullyRefunded?: boolean;
+        refundedAmount?: number;
+      }>(res);
       if (!res.ok) {
         toast.error(data.error ?? "Refund failed");
         return;
       }
-      toast.success("Transaction refunded — reason saved");
+      const label = data.fullyRefunded
+        ? "Full refund completed"
+        : `Partial refund of ${formatCurrency(data.refundedAmount ?? amount)} recorded`;
+      toast.success(label);
       if (data.warning) toast.warning(data.warning);
       setRefundDialog(null);
       load();
@@ -116,6 +161,7 @@ export default function AdminTransactionsPage() {
                 <th className="px-3 py-2 text-left">Note</th>
                 <th className="px-3 py-2 text-left">Coupon</th>
                 <th className="px-3 py-2 text-left">Final</th>
+                <th className="px-3 py-2 text-left">Refunded</th>
                 <th className="px-3 py-2 text-left">Payment</th>
                 <th className="px-3 py-2 text-left">Date</th>
                 <th className="px-3 py-2 text-left">Actions</th>
@@ -128,7 +174,18 @@ export default function AdminTransactionsPage() {
                   <td className="px-3 py-2">{t.studentName}</td>
                   <td className="px-3 py-2 max-w-xs">
                     <div className="font-medium text-slate-900">{t.noteName}</div>
-                    {t.refundReason ? (
+                    {t.refunds.length > 0 ? (
+                      <ul className="mt-2 space-y-1">
+                        {t.refunds.map((r, i) => (
+                          <li
+                            key={`${r.createdAt}-${i}`}
+                            className="rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900"
+                          >
+                            <span className="font-semibold">{formatCurrency(r.amount)}:</span> {r.reason}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : t.refundReason ? (
                       <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
                         <span className="font-semibold">Refund reason:</span> {t.refundReason}
                       </p>
@@ -141,16 +198,32 @@ export default function AdminTransactionsPage() {
                   <td className="px-3 py-2">{t.coupon ?? "-"}</td>
                   <td className="px-3 py-2">{formatCurrency(t.finalAmount)}</td>
                   <td className="px-3 py-2">
+                    {t.refundedAmount > 0 ? (
+                      <div className="text-amber-800">
+                        {formatCurrency(t.refundedAmount)}
+                        {t.refundableRemaining > 0 ? (
+                          <div className="text-xs text-slate-500">
+                            {formatCurrency(t.refundableRemaining)} left
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
                     <span
                       className={
                         t.paymentStatus === "SUCCESS"
                           ? "text-emerald-700"
-                          : t.paymentStatus === "REFUNDED"
+                          : t.paymentStatus === "PARTIALLY_REFUNDED"
                             ? "text-amber-700 font-medium"
-                            : ""
+                            : t.paymentStatus === "REFUNDED"
+                              ? "text-amber-700 font-medium"
+                              : ""
                       }
                     >
-                      {t.paymentStatus}
+                      {t.paymentStatus === "PARTIALLY_REFUNDED" ? "PARTIAL REFUND" : t.paymentStatus}
                     </span>
                   </td>
                   <td className="px-3 py-2">{new Date(t.date).toLocaleString()}</td>
@@ -174,7 +247,7 @@ export default function AdminTransactionsPage() {
                         size="sm"
                         variant="destructive"
                         disabled={!t.canRefund || refundingId === t.orderId}
-                        onClick={() => setRefundDialog({ orderId: t.orderId, reason: "" })}
+                        onClick={() => openRefundDialog(t)}
                       >
                         {refundingId === t.orderId ? "Refunding…" : "Refund"}
                       </Button>
@@ -195,8 +268,36 @@ export default function AdminTransactionsPage() {
           <div className="w-full max-w-md space-y-4 rounded-2xl border bg-white p-6 shadow-lg">
             <h2 className="text-lg font-semibold">Refund transaction</h2>
             <p className="text-sm text-slate-600">
-              Reason will appear in the <strong>Note</strong> column for this transaction.
+              Order total {formatCurrency(refundDialog.finalAmount)} · remaining{" "}
+              <strong>{formatCurrency(refundDialog.refundableRemaining)}</strong>. Partial refunds
+              keep note access until the order is fully refunded.
             </p>
+            <div>
+              <Label htmlFor="refund-amount">Refund amount (₹)</Label>
+              <div className="mt-1 flex gap-2">
+                <Input
+                  id="refund-amount"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  max={refundDialog.refundableRemaining}
+                  value={refundDialog.amount}
+                  onChange={(e) => setRefundDialog({ ...refundDialog, amount: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setRefundDialog({
+                      ...refundDialog,
+                      amount: refundDialog.refundableRemaining.toFixed(2),
+                    })
+                  }
+                >
+                  Full
+                </Button>
+              </div>
+            </div>
             <div>
               <Label htmlFor="refund-reason">Refund reason</Label>
               <Textarea
@@ -204,7 +305,7 @@ export default function AdminTransactionsPage() {
                 className="mt-1 min-h-[100px]"
                 value={refundDialog.reason}
                 onChange={(e) => setRefundDialog({ ...refundDialog, reason: e.target.value })}
-                placeholder="e.g. Duplicate payment, customer request, wrong note purchased"
+                placeholder="e.g. Partial goodwill credit, duplicate charge adjustment"
                 required
               />
             </div>

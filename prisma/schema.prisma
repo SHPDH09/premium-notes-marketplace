@@ -37,6 +37,7 @@ enum PaymentStatus {
   PENDING
   SUCCESS
   FAILED
+  PARTIALLY_REFUNDED
   REFUNDED
 }
 
@@ -44,6 +45,7 @@ enum TransactionStatus {
   PENDING
   SUCCESS
   FAILED
+  PARTIALLY_REFUNDED
   REFUNDED
 }
 
@@ -203,6 +205,7 @@ model Order {
   cashfreeOrderId   String?           @unique @map("cashfree_order_id")
   adminNote         String?           @map("admin_note") @db.Text
   refundReason      String?           @map("refund_reason") @db.Text
+  refundedAmount    Decimal           @default(0) @map("refunded_amount") @db.Decimal(10, 2)
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
 
@@ -212,6 +215,7 @@ model Order {
   transaction Transaction?
   purchases   Purchase[]
   redemption  CouponRedemption?
+  refunds     OrderRefund[]
 
   @@index([userId])
   @@index([createdAt])
@@ -230,6 +234,19 @@ model OrderItem {
   note  Note  @relation(fields: [noteId], references: [id], onDelete: Restrict)
 
   @@map("order_items")
+}
+
+model OrderRefund {
+  id        String   @id @default(cuid())
+  orderId   String   @map("order_id")
+  amount    Decimal  @db.Decimal(10, 2)
+  reason    String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_refunds")
 }
 
 model Transaction {

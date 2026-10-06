@@ -43,8 +43,19 @@ export default function TransactionsPage() {
                     ) : null}
                   </td>
                   <td className="px-4 py-3">{t.coupon ?? "-"}</td>
-                  <td className="px-4 py-3">{formatCurrency(t.finalAmount)}</td>
-                  <td className="px-4 py-3">{t.paymentStatus}</td>
+                  <td className="px-4 py-3">
+                    {formatCurrency(t.finalAmount)}
+                    {t.refundedAmount > 0 ? (
+                      <div className="text-xs text-amber-800">
+                        Refunded {formatCurrency(t.refundedAmount)}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    {t.paymentStatus === "PARTIALLY_REFUNDED"
+                      ? "Partial refund"
+                      : t.paymentStatus}
+                  </td>
                   <td className="px-4 py-3">{new Date(t.createdAt).toLocaleString()}</td>
                 </tr>
               ))}

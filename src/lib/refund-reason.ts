@@ -1,7 +1,13 @@
 const REFUND_PREFIX = "[Refund]";
 
-export function formatRefundAdminNote(reason: string, existingAdminNote?: string | null): string {
-  const line = `${REFUND_PREFIX} ${reason.trim()}`;
+export function formatRefundAdminNote(
+  reason: string,
+  existingAdminNote?: string | null,
+  amount?: number
+): string {
+  const amountLabel =
+    amount != null && Number.isFinite(amount) ? ` ₹${amount.toFixed(2)} —` : "";
+  const line = `${REFUND_PREFIX}${amountLabel} ${reason.trim()}`;
   if (existingAdminNote?.trim()) {
     return `${existingAdminNote.trim()}\n${line}`;
   }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
 import { refundOrder } from "@/lib/orders";
-import { formatRefundAdminNote } from "@/lib/refund-reason";
 
 export const runtime = "nodejs";
 
@@ -43,30 +42,28 @@ export async function POST(
   if (auth.error) return auth.error;
 
   try {
-    const body = (await req.json().catch(() => ({}))) as { reason?: string };
+    const body = (await req.json().catch(() => ({}))) as { reason?: string; amount?: number };
     const reason = body.reason?.trim();
     if (!reason) {
       return NextResponse.json({ error: "Refund reason is required" }, { status: 400 });
     }
 
-    const result = await refundOrder(params.orderId);
+    let amount: number | undefined;
+    if (body.amount !== undefined && body.amount !== null) {
+      const parsed = typeof body.amount === "number" ? body.amount : Number(body.amount);
+      if (!Number.isFinite(parsed)) {
+        return NextResponse.json({ error: "Invalid refund amount" }, { status: 400 });
+      }
+      amount = parsed;
+    }
 
-    const existing = await prisma.order.findUnique({
-      where: { id: params.orderId },
-      select: { adminNote: true },
-    });
-
-    await prisma.order.update({
-      where: { id: params.orderId },
-      data: {
-        refundReason: reason,
-        adminNote: formatRefundAdminNote(reason, existing?.adminNote),
-      },
-    });
+    const result = await refundOrder(params.orderId, { reason, amount });
 
     return NextResponse.json({
       ok: true,
       warning: result.gatewayWarning,
+      refundedAmount: result.refundedAmount,
+      fullyRefunded: result.fullyRefunded,
     });
   } catch (e) {
     console.error("admin transaction refund POST", e);

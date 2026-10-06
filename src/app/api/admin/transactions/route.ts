@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { decimalToNumber } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 import { resolveRefundReason } from "@/lib/refund-reason";
+import { orderRefundableRemaining } from "@/lib/orders";
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin();
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
       coupon: true,
       items: { include: { note: true } },
       transaction: true,
+      refunds: { orderBy: { createdAt: "desc" } },
     },
     orderBy: { createdAt: "desc" },
     take: 100,
@@ -67,7 +69,15 @@ export async function GET(req: NextRequest) {
       transactionStatus: o.transactionStatus,
       adminNote: o.adminNote,
       refundReason: resolveRefundReason(o.refundReason, o.adminNote),
-      canRefund: o.paymentStatus === "SUCCESS",
+      refundedAmount: decimalToNumber(o.refundedAmount),
+      refundableRemaining: orderRefundableRemaining(o.totalAmount, o.refundedAmount),
+      refunds: o.refunds.map((r) => ({
+        amount: decimalToNumber(r.amount),
+        reason: r.reason,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      canRefund:
+        o.paymentStatus === "SUCCESS" || o.paymentStatus === "PARTIALLY_REFUNDED",
       date: o.createdAt.toISOString(),
     })),
   });

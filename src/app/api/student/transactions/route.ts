@@ -14,6 +14,7 @@ export async function GET() {
       coupon: true,
       items: { include: { note: true } },
       transaction: true,
+      refunds: { orderBy: { createdAt: "desc" } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -31,9 +32,18 @@ export async function GET() {
       finalAmount: decimalToNumber(o.totalAmount),
       paymentStatus: o.paymentStatus,
       transactionStatus: o.transactionStatus,
+      refundedAmount: decimalToNumber(o.refundedAmount),
       refundReason:
-        o.paymentStatus === "REFUNDED"
+        o.paymentStatus === "REFUNDED" || o.paymentStatus === "PARTIALLY_REFUNDED"
           ? resolveRefundReason(o.refundReason, o.adminNote)
+          : null,
+      refunds:
+        o.refunds.length > 0
+          ? o.refunds.map((r) => ({
+              amount: decimalToNumber(r.amount),
+              reason: r.reason,
+              createdAt: r.createdAt.toISOString(),
+            }))
           : null,
       createdAt: o.createdAt.toISOString(),
     })),
