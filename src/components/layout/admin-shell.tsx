@@ -15,6 +15,7 @@ import {
   Menu,
   Handshake,
   Home,
+  Megaphone,
 } from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -26,6 +27,7 @@ const nav = [
   { href: "/admin/users", label: "Students", icon: Users },
   { href: "/admin/collaborators", label: "Collaborations", icon: Handshake },
   { href: "/admin/homepage", label: "Homepage", icon: Home },
+  { href: "/admin/popups", label: "Popups", icon: Megaphone },
   { href: "/admin/transactions", label: "Transactions", icon: Receipt },
   { href: "/admin/profile", label: "Profile", icon: User },
   { href: "/admin/settings/password", label: "Password", icon: KeyRound },
