@@ -96,6 +96,21 @@ npm run dev
 
 Set `NEXT_PUBLIC_APP_URL` to your Vercel domain and configure Cashfree webhook/return URLs accordingly.
 
+### Sync env vars with Vercel CLI
+
+This agent runtime does **not** receive your Vercel token unless you add it as a Cloud Agent secret. To push variables in one step locally or in a trusted CI job:
+
+```bash
+export VERCEL_TOKEN=your_token
+cp .env.example .env.vercel.local   # fill real values; never commit
+chmod +x scripts/sync-vercel-env.sh
+./scripts/sync-vercel-env.sh production
+```
+
+Use `./scripts/sync-vercel-env.sh all` to mirror vars to Preview and Development too.
+
+**`DATABASE_URL` must be the PostgreSQL URI** from Supabase (starts with `postgresql://`), not the `https://….supabase.co` project URL.
+
 ## Scripts
 
 - `npm run db:push` — sync schema (dev)
