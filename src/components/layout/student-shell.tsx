@@ -6,6 +6,7 @@ import { BrandLogo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, ShoppingCart, BookOpen, Receipt, User, Menu } from "lucide-react";
 import { useState } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -24,7 +25,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-64 transform border-r border-slate-200 bg-white p-5 transition md:static md:translate-x-0 md:rounded-2xl md:border md:shadow-sm",
+            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col transform border-r border-slate-200 bg-white p-5 transition md:static md:translate-x-0 md:rounded-2xl md:border md:shadow-sm",
             open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           )}
         >
@@ -49,6 +50,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </nav>
+          <div className="mt-auto border-t border-slate-100 pt-4">
+            <LogoutButton variant="sidebar" callbackUrl="/login" />
+          </div>
         </aside>
         <div className="flex-1 md:ml-0">
           <div className="mb-4 flex items-center justify-between md:hidden">

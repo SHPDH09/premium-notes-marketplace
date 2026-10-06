@@ -17,6 +17,7 @@ import {
   Home,
 } from "lucide-react";
 import { useState } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -39,7 +40,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 sm:px-6">
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-64 transform border-r border-slate-200 bg-white p-5 transition lg:static lg:translate-x-0 lg:rounded-2xl lg:border lg:shadow-sm",
+            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col transform border-r border-slate-200 bg-white p-5 transition lg:static lg:translate-x-0 lg:rounded-2xl lg:border lg:shadow-sm",
             open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
         >
@@ -65,6 +66,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </nav>
+          <div className="mt-auto border-t border-slate-100 pt-4">
+            <LogoutButton variant="sidebar" callbackUrl="/admin/login" />
+          </div>
         </aside>
         <div className="flex-1">
           <div className="mb-4 flex items-center justify-between lg:hidden">

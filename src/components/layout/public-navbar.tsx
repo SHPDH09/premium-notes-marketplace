@@ -6,6 +6,7 @@ import { BrandLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 export function PublicNavbar() {
   const { data: session } = useSession();
@@ -29,9 +30,19 @@ export function PublicNavbar() {
         </nav>
         <div className="hidden items-center gap-3 md:flex">
           {session?.user?.role === "STUDENT" ? (
-            <Button asChild>
-              <Link href="/dashboard">Student Dashboard</Link>
-            </Button>
+            <>
+              <Button asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+              <LogoutButton variant="ghost" callbackUrl="/login" />
+            </>
+          ) : session?.user?.role === "ADMIN" ? (
+            <>
+              <Button variant="secondary" asChild>
+                <Link href="/admin">Admin</Link>
+              </Button>
+              <LogoutButton variant="ghost" callbackUrl="/admin/login" />
+            </>
           ) : (
             <>
               <Button variant="ghost" asChild>
@@ -56,9 +67,19 @@ export function PublicNavbar() {
               </Link>
             ))}
             {session?.user?.role === "STUDENT" ? (
-              <Button asChild>
-                <Link href="/dashboard">Student Dashboard</Link>
-              </Button>
+              <>
+                <Button asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+                <LogoutButton callbackUrl="/login" />
+              </>
+            ) : session?.user?.role === "ADMIN" ? (
+              <>
+                <Button variant="secondary" asChild>
+                  <Link href="/admin">Admin</Link>
+                </Button>
+                <LogoutButton callbackUrl="/admin/login" />
+              </>
             ) : (
               <>
                 <Button variant="secondary" asChild>
