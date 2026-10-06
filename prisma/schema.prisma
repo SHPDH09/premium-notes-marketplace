@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum NoteStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum CouponStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String     @unique
+  phone         String?
+  passwordHash  String     @map("password_hash")
+  role          Role       @default(STUDENT)
+  profileImage  String?    @map("profile_image")
+  status        UserStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  cartItems          CartItem[]
+  cartMeta           CartMeta?
+  orders             Order[]
+  transactions       Transaction[]
+  purchases          Purchase[]
+  couponRedemptions  CouponRedemption[]
+  adminProfile       AdminProfile?
+
+  @@map("users")
+}
+
+model AdminProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_profiles")
+}
+
+model Note {
+  id            String       @id @default(cuid())
+  name          String
+  coverImage    String?      @map("cover_image")
+  title         String
+  description   String       @db.Text
+  pdfStorageKey String?      @map("pdf_storage_key")
+  notesLink     String?      @map("notes_link")
+  price         Decimal      @db.Decimal(10, 2)
+  discountType  DiscountType @default(PERCENTAGE) @map("discount_type")
+  discountValue Decimal      @default(0) @map("discount_value") @db.Decimal(10, 2)
+  finalPrice    Decimal      @map("final_price") @db.Decimal(10, 2)
+  status        NoteStatus   @default(ACTIVE)
+  purchaseCount Int          @default(0) @map("purchase_count")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+  purchases    Purchase[]
+  couponNotes  CouponNote[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("notes")
+}
+
+model Coupon {
+  id                  String         @id @default(cuid())
+  code                String         @unique
+  discountType        DiscountType   @map("discount_type")
+  discountValue       Decimal        @map("discount_value") @db.Decimal(10, 2)
+  maxUsers            Int?           @map("max_users")
+  usedCount           Int            @default(0) @map("used_count")
+  validFrom           DateTime       @map("valid_from")
+  validUntil          DateTime       @map("valid_until")
+  minPurchaseAmount   Decimal        @default(0) @map("min_purchase_amount") @db.Decimal(10, 2)
+  maxDiscount         Decimal?       @map("max_discount") @db.Decimal(10, 2)
+  status              CouponStatus   @default(ACTIVE)
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  couponNotes    CouponNote[]
+  orders         Order[]
+  redemptions    CouponRedemption[]
+
+  @@map("coupons")
+}
+
+model CouponNote {
+  couponId String @map("coupon_id")
+  noteId   String @map("note_id")
+  coupon   Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  note     Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@id([couponId, noteId])
+  @@map("coupon_notes")
+}
+
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  couponId  String   @map("coupon_id")
+  orderId   String   @unique @map("order_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
+  @@map("coupon_redemptions")
+}
+
+model CartMeta {
+  userId     String  @id @map("user_id")
+  couponCode String? @map("coupon_code")
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cart_meta")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  noteId    String   @map("note_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, noteId])
+  @@map("cart_items")
+}
+
+model Order {
+  id                String            @id @default(cuid())
+  userId            String            @map("user_id")
+  subtotal          Decimal           @db.Decimal(10, 2)
+  discount          Decimal           @default(0) @db.Decimal(10, 2)
+  couponDiscount    Decimal           @default(0) @map("coupon_discount") @db.Decimal(10, 2)
+  totalAmount       Decimal           @map("total_amount") @db.Decimal(10, 2)
+  couponId          String?           @map("coupon_id")
+  paymentStatus     PaymentStatus     @default(PENDING) @map("payment_status")
+  transactionStatus TransactionStatus @default(PENDING) @map("transaction_status")
+  cashfreeOrderId   String?           @unique @map("cashfree_order_id")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon      Coupon?           @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items       OrderItem[]
+  transaction Transaction?
+  purchases   Purchase[]
+  redemption  CouponRedemption?
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String  @map("order_id")
+  noteId     String  @map("note_id")
+  price      Decimal @db.Decimal(10, 2)
+  discount   Decimal @default(0) @db.Decimal(10, 2)
+  finalPrice Decimal @map("final_price") @db.Decimal(10, 2)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  note  Note  @relation(fields: [noteId], references: [id], onDelete: Restrict)
+
+  @@map("order_items")
+}
+
+model Transaction {
+  id              String        @id @default(cuid())
+  orderId         String        @unique @map("order_id")
+  userId          String        @map("user_id")
+  transactionId   String        @unique @map("transaction_id")
+  amount          Decimal       @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @map("payment_status")
+  paymentMethod   String        @default("cashfree") @map("payment_method")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("transactions")
+}
+
+model Purchase {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  noteId          String   @map("note_id")
+  orderId         String   @map("order_id")
+  purchasedPrice  Decimal  @map("purchased_price") @db.Decimal(10, 2)
+  purchasedAt     DateTime @default(now()) @map("purchased_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note  Note  @relation(fields: [noteId], references: [id], onDelete: Restrict)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, noteId])
+  @@index([userId])
+  @@map("purchases")
+}

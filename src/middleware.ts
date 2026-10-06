@@ -1,0 +1,63 @@
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+
+export default withAuth(
+  function middleware(req) {
+    const token = req.nextauth.token;
+    const path = req.nextUrl.pathname;
+
+    if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
+      if (!token || token.role !== "ADMIN") {
+        return NextResponse.redirect(new URL("/admin/login", req.url));
+      }
+    }
+
+    if (
+      path.startsWith("/dashboard") ||
+      path.startsWith("/cart") ||
+      path.startsWith("/purchases") ||
+      path.startsWith("/transactions") ||
+      path === "/profile"
+    ) {
+      if (!token || token.role !== "STUDENT") {
+        return NextResponse.redirect(new URL("/login", req.url));
+      }
+    }
+
+    if (token?.role === "ADMIN" && (path === "/login" || path === "/register")) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const path = req.nextUrl.pathname;
+        if (path.startsWith("/admin/login")) return true;
+        if (
+          path.startsWith("/admin") ||
+          path.startsWith("/dashboard") ||
+          path.startsWith("/cart") ||
+          path.startsWith("/purchases") ||
+          path.startsWith("/transactions") ||
+          path === "/profile"
+        ) {
+          return !!token;
+        }
+        return true;
+      },
+    },
+  }
+);
+
+export const config = {
+  matcher: [
+    "/admin/:path*",
+    "/dashboard/:path*",
+    "/cart",
+    "/purchases",
+    "/transactions",
+    "/profile",
+  ],
+};
