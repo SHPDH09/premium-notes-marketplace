@@ -3,5 +3,5 @@ export const brand = {
   tagline: "Premium study notes for ambitious learners",
   logoText: process.env.NEXT_PUBLIC_BRAND_LOGO_TEXT ?? "TL",
   primaryColor: "indigo",
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "quantronsot@gmail.com",
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "quantronsoft@gmail.com",
 } as const;
