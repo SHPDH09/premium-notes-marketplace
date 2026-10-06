@@ -111,6 +111,8 @@ Use `./scripts/sync-vercel-env.sh all` to mirror vars to Preview and Development
 
 **`DATABASE_URL` must be the PostgreSQL URI** from Supabase (starts with `postgresql://`), not the `https://….supabase.co` project URL.
 
+**Large PDF/cover uploads:** Admin uploads go **directly to S3-compatible storage** (presigned URLs) so they bypass Vercel’s ~4.5MB function body limit. Enable **CORS** on your storage bucket to allow `PUT` from your site origin (e.g. `https://premium-notes-marketplace.vercel.app`).
+
 ## Scripts
 
 - `npm run db:push` — sync schema (dev)

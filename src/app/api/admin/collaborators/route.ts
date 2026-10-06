@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
 import { serializeCollaborator } from "@/lib/collaborators";
-import { uploadFile, validateImageFile } from "@/lib/storage";
 import { CollaboratorType, PublishStatus } from "@prisma/client";
 import { isAllowedStorageKey } from "@/lib/file-limits";
+import { withAdminJson } from "@/lib/api/admin-route";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const VALID_TYPES: CollaboratorType[] = ["COMPANY", "COLLEGE", "INSTITUTE"];
 
@@ -16,11 +16,28 @@ function parseType(value: string): CollaboratorType {
   return "COMPANY";
 }
 
-export async function GET(req: NextRequest) {
-  const auth = await requireAdmin();
-  if (auth.error) return auth.error;
+function safeSerializeList(items: Awaited<ReturnType<typeof prisma.collaborator.findMany>>) {
+  return items.map((item) => {
+    try {
+      return serializeCollaborator(item);
+    } catch (e) {
+      console.error("serialize collaborator", item.id, e);
+      return {
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        logoImage: null,
+        website: item.website,
+        description: item.description,
+        status: item.status,
+        sortOrder: item.sortOrder,
+      };
+    }
+  });
+}
 
-  try {
+export async function GET(req: NextRequest) {
+  return withAdminJson(async () => {
     const q = req.nextUrl.searchParams.get("q")?.trim();
     const type = req.nextUrl.searchParams.get("type");
 
@@ -32,20 +49,14 @@ export async function GET(req: NextRequest) {
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     });
 
-    return NextResponse.json({ collaborators: items.map(serializeCollaborator) });
-  } catch (e) {
-    console.error("admin collaborators GET", e);
-    const message = e instanceof Error ? e.message : "Failed to load collaborators";
-    return NextResponse.json({ error: message, collaborators: [] }, { status: 500 });
-  }
+    return NextResponse.json({ collaborators: safeSerializeList(items) });
+  });
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin();
-  if (auth.error) return auth.error;
-
-  try {
+  return withAdminJson(async () => {
     const contentType = req.headers.get("content-type") ?? "";
+
     if (contentType.includes("application/json")) {
       const body = (await req.json()) as Record<string, unknown>;
       const name = String(body.name ?? "").trim();
@@ -77,6 +88,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ collaborator: serializeCollaborator(item) }, { status: 201 });
     }
 
+    const { uploadFile, validateImageFile } = await import("@/lib/storage");
     const form = await req.formData();
     const name = String(form.get("name") ?? "").trim();
     const type = parseType(String(form.get("type") ?? "COMPANY"));
@@ -114,9 +126,5 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (e) {
-    console.error("admin collaborators POST", e);
-    const message = e instanceof Error ? e.message : "Failed to create collaborator";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  });
 }

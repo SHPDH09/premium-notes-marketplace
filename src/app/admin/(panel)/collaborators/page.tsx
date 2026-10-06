@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +38,10 @@ export default function AdminCollaboratorsPage() {
     try {
       const params = new URLSearchParams();
       if (filter !== "all") params.set("type", filter);
-      const res = await fetch(`/api/admin/collaborators?${params}`);
+      const res = await fetch(`/api/admin/collaborators?${params}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
       const data = await readJsonResponse<{ collaborators?: Collaborator[] }>(res);
       if (!res.ok) {
         toast.error(data.error ?? "Failed to load collaborators");
@@ -54,7 +56,10 @@ export default function AdminCollaboratorsPage() {
   }
 
   useEffect(() => {
-    load();
+    void load().catch(() => {
+      toast.error("Failed to load collaborators");
+      setItems([]);
+    });
   }, [filter]);
 
   async function create(e: React.FormEvent) {
@@ -71,6 +76,7 @@ export default function AdminCollaboratorsPage() {
       }
       const res = await fetch("/api/admin/collaborators", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, logoStorageKey }),
       });
@@ -175,7 +181,8 @@ export default function AdminCollaboratorsPage() {
                   <td className="px-4 py-3">
                     <div className="relative h-10 w-16">
                       {c.logoImage ? (
-                        <Image src={c.logoImage} alt="" fill className="object-contain" />
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.logoImage} alt="" className="h-10 w-16 object-contain" />
                       ) : (
                         <span className="text-xs text-slate-400">—</span>
                       )}

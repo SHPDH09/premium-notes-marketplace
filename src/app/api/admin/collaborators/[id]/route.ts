@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
+import { withAdminJson } from "@/lib/api/admin-route";
 import { serializeCollaborator } from "@/lib/collaborators";
 import { deleteStoredFile, uploadFile, validateImageFile } from "@/lib/storage";
 import { CollaboratorType, PublishStatus } from "@prisma/client";
@@ -16,10 +16,7 @@ function parseType(value: string): CollaboratorType {
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireAdmin();
-  if (auth.error) return auth.error;
-
-  try {
+  return withAdminJson(async () => {
     const existing = await prisma.collaborator.findUnique({ where: { id: params.id } });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -74,18 +71,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       collaborator: serializeCollaborator(item),
       warning: logoWarning,
     });
-  } catch (e) {
-    console.error("admin collaborators PATCH", e);
-    const message = e instanceof Error ? e.message : "Failed to update collaborator";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireAdmin();
-  if (auth.error) return auth.error;
-
-  try {
+  return withAdminJson(async () => {
     const existing = await prisma.collaborator.findUnique({ where: { id: params.id } });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -93,9 +83,5 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     if (existing.logoImage) await deleteStoredFile(existing.logoImage);
 
     return NextResponse.json({ ok: true });
-  } catch (e) {
-    console.error("admin collaborators DELETE", e);
-    const message = e instanceof Error ? e.message : "Failed to delete collaborator";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  });
 }

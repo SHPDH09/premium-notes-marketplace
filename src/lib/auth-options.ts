@@ -3,6 +3,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 
+if (!process.env.NEXTAUTH_URL) {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    process.env.NEXTAUTH_URL = process.env.NEXT_PUBLIC_APP_URL;
+  } else if (process.env.VERCEL_URL) {
+    process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+  }
+}
+
 declare module "next-auth" {
   interface Session {
     user: {
