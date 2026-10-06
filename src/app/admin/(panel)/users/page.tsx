@@ -7,45 +7,85 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { readJsonResponse } from "@/lib/api/fetch-json";
+import { formatApiError } from "@/lib/api/format-api-error";
+
+type StudentRow = {
+  id: string;
+  name: string;
+  email: string;
+  totalPurchases: number;
+  status: string;
+};
+
+const initialForm = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  status: "ACTIVE" as const,
+  showOnHomepage: false,
+  homepageInstitute: "",
+  homepageHeadline: "Featured Student",
+  homepageQuote: "",
+};
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<StudentRow[]>([]);
   const [q, setQ] = useState("");
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    status: "ACTIVE",
-    showOnHomepage: false,
-    homepageInstitute: "",
-    homepageHeadline: "Featured Student",
-    homepageQuote: "",
-  });
+  const [form, setForm] = useState(initialForm);
+  const [submitting, setSubmitting] = useState(false);
 
   async function load() {
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    const res = await fetch(`/api/admin/users?${params}`);
-    const data = await res.json();
-    setUsers(data.users ?? []);
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      const res = await fetch(`/api/admin/users?${params}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await readJsonResponse<{ users?: StudentRow[]; error?: unknown }>(res);
+      if (!res.ok) {
+        toast.error(formatApiError(data.error));
+        return;
+      }
+      setUsers(data.users ?? []);
+    } catch {
+      toast.error("Failed to load students");
+    }
   }
 
   useEffect(() => {
-    load();
+    void load().catch(() => undefined);
   }, []);
 
   async function addStudent(e: React.FormEvent) {
     e.preventDefault();
-    const res = await fetch("/api/admin/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error ?? "Failed");
-    toast.success("Student created");
-    load();
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await readJsonResponse<{ error?: unknown }>(res);
+      if (!res.ok) {
+        toast.error(formatApiError(data.error));
+        return;
+      }
+      toast.success("Student created");
+      setForm(initialForm);
+      await load();
+    } catch {
+      toast.error("Network error while creating student");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -66,12 +106,18 @@ export default function AdminUsersPage() {
             <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
           </div>
           <div>
-            <Label>Password</Label>
-            <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+            <Label>Password (min 8 chars)</Label>
+            <Input
+              type="password"
+              minLength={8}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
           </div>
           <div className="flex items-end">
-            <Button type="submit" className="w-full">
-              Add Student
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? "Adding…" : "Add Student"}
             </Button>
           </div>
         </div>
@@ -109,7 +155,7 @@ export default function AdminUsersPage() {
       </form>
       <div className="flex gap-2">
         <Input placeholder="Search students" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Button variant="outline" onClick={load}>
+        <Button variant="outline" onClick={() => void load()}>
           Search
         </Button>
       </div>
@@ -130,7 +176,7 @@ export default function AdminUsersPage() {
                 <tr key={u.id} className="border-t">
                   <td className="px-4 py-3">{u.name}</td>
                   <td className="px-4 py-3">{u.email}</td>
-                  <td className="px-4 py-3">{u.totalPurchases}</td>
+                  <td className="px-4 py-3">{u.totalPurchases ?? 0}</td>
                   <td className="px-4 py-3">{u.status}</td>
                   <td className="px-4 py-3">
                     <Button size="sm" variant="outline" asChild>
@@ -141,6 +187,7 @@ export default function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+          {!users.length && <p className="p-6 text-center text-slate-500">No students yet.</p>}
         </CardContent>
       </Card>
     </div>
