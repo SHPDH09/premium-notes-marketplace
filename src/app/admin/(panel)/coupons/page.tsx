@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import { NotePicker } from "@/components/admin/note-picker";
 
 export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -107,26 +108,15 @@ export default function AdminCouponsPage() {
           <Label>Valid Until</Label>
           <Input type="datetime-local" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} required />
         </div>
-        <div className="md:col-span-3">
+        <div className="relative md:col-span-3">
           <Label>Applicable Notes (leave empty for all)</Label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {notes.map((n) => (
-              <label key={n.id} className="flex items-center gap-2 rounded-lg border px-2 py-1 text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.noteIds.includes(n.id)}
-                  onChange={(e) => {
-                    setForm({
-                      ...form,
-                      noteIds: e.target.checked
-                        ? [...form.noteIds, n.id]
-                        : form.noteIds.filter((id: string) => id !== n.id),
-                    });
-                  }}
-                />
-                {n.title}
-              </label>
-            ))}
+          <div className="mt-2">
+            <NotePicker
+              notes={notes.map((n) => ({ id: n.id, title: n.title }))}
+              value={form.noteIds}
+              onChange={(noteIds) => setForm({ ...form, noteIds })}
+              placeholder="Search or pick notes from dropdown…"
+            />
           </div>
         </div>
         <Button type="submit">Create Coupon</Button>
