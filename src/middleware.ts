@@ -17,6 +17,11 @@ export default withAuth(
       path.startsWith("/cart") ||
       path.startsWith("/purchases") ||
       path.startsWith("/transactions") ||
+      path.startsWith("/physical-documents") ||
+      path.startsWith("/physical-cart") ||
+      path.startsWith("/physical-checkout") ||
+      path.startsWith("/physical-orders") ||
+      path.startsWith("/addresses") ||
       path === "/profile"
     ) {
       if (!token || token.role !== "STUDENT") {
@@ -37,6 +42,7 @@ export default withAuth(
         if (path.startsWith("/admin/login")) return true;
         if (path.startsWith("/login") || path.startsWith("/register")) return true;
         if (path.startsWith("/checkout")) return true;
+        if (path.startsWith("/physical-checkout")) return true;
         if (path.startsWith("/notes/") && path.endsWith("/payment")) return true;
         if (
           path.startsWith("/admin") ||
@@ -44,6 +50,10 @@ export default withAuth(
           path.startsWith("/cart") ||
           path.startsWith("/purchases") ||
           path.startsWith("/transactions") ||
+          path.startsWith("/physical-documents") ||
+          path.startsWith("/physical-cart") ||
+          path.startsWith("/physical-orders") ||
+          path.startsWith("/addresses") ||
           path === "/profile"
         ) {
           return !!token;
@@ -62,5 +72,10 @@ export const config = {
     "/purchases",
     "/transactions",
     "/profile",
+    "/physical-documents/:path*",
+    "/physical-cart",
+    "/physical-checkout/:path*",
+    "/physical-orders/:path*",
+    "/addresses",
   ],
 };

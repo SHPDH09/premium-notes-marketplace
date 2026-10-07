@@ -15,6 +15,8 @@ const schema = z.object({
   maxDiscount: z.number().positive().nullable().optional(),
   status: z.enum(["ACTIVE", "DISABLED"]).optional(),
   noteIds: z.array(z.string()).optional(),
+  physicalDocumentIds: z.array(z.string()).optional(),
+  appliesTo: z.enum(["NOTE", "PHYSICAL", "BOTH"]).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -37,6 +39,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
+  if (data.physicalDocumentIds) {
+    await prisma.couponPhysicalDocument.deleteMany({ where: { couponId: params.id } });
+    if (data.physicalDocumentIds.length) {
+      await prisma.couponPhysicalDocument.createMany({
+        data: data.physicalDocumentIds.map((physicalDocumentId) => ({
+          couponId: params.id,
+          physicalDocumentId,
+        })),
+      });
+    }
+  }
+
   const coupon = await prisma.coupon.update({
     where: { id: params.id },
     data: {
@@ -49,8 +63,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(data.minPurchaseAmount != null ? { minPurchaseAmount: data.minPurchaseAmount } : {}),
       ...(data.maxDiscount !== undefined ? { maxDiscount: data.maxDiscount } : {}),
       ...(data.status ? { status: data.status } : {}),
+      ...(data.appliesTo ? { appliesTo: data.appliesTo } : {}),
     },
-    include: { couponNotes: true },
+    include: { couponNotes: true, couponPhysicalDocuments: true },
   });
 
   return NextResponse.json({ coupon: serializeCoupon(coupon) });

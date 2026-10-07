@@ -15,6 +15,8 @@ const schema = z.object({
   maxDiscount: z.number().positive().nullable().optional(),
   status: z.enum(["ACTIVE", "DISABLED"]).default("ACTIVE"),
   noteIds: z.array(z.string()).optional(),
+  physicalDocumentIds: z.array(z.string()).optional(),
+  appliesTo: z.enum(["NOTE", "PHYSICAL", "BOTH"]).default("NOTE"),
 });
 
 export async function GET(req: NextRequest) {
@@ -24,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const coupons = await prisma.coupon.findMany({
     where: q ? { code: { contains: q.toUpperCase(), mode: "insensitive" } } : undefined,
-    include: { couponNotes: true },
+    include: { couponNotes: true, couponPhysicalDocuments: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -52,11 +54,15 @@ export async function POST(req: NextRequest) {
       minPurchaseAmount: data.minPurchaseAmount,
       maxDiscount: data.maxDiscount ?? null,
       status: data.status,
+      appliesTo: data.appliesTo,
       couponNotes: data.noteIds?.length
         ? { create: data.noteIds.map((noteId) => ({ noteId })) }
         : undefined,
+      couponPhysicalDocuments: data.physicalDocumentIds?.length
+        ? { create: data.physicalDocumentIds.map((physicalDocumentId) => ({ physicalDocumentId })) }
+        : undefined,
     },
-    include: { couponNotes: true },
+    include: { couponNotes: true, couponPhysicalDocuments: true },
   });
 
   return NextResponse.json({ coupon: serializeCoupon(coupon) }, { status: 201 });

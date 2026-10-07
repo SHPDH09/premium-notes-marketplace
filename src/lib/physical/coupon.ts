@@ -1,26 +1,33 @@
-import { Coupon, CouponNote, DiscountType } from "@prisma/client";
+import { Coupon, CouponNote, CouponPhysicalDocument, DiscountType, CouponAppliesTo } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { calculateCouponDiscount, roundMoney } from "@/lib/pricing";
 
-type CouponWithNotes = Coupon & { couponNotes: CouponNote[] };
+type CouponWithRelations = Coupon & {
+  couponNotes: CouponNote[];
+  couponPhysicalDocuments: CouponPhysicalDocument[];
+};
 
-export async function validateCouponForCart(params: {
+function appliesToPhysical(appliesTo: CouponAppliesTo): boolean {
+  return appliesTo === "PHYSICAL" || appliesTo === "BOTH";
+}
+
+export async function validateCouponForPhysicalCart(params: {
   code: string;
   userId: string;
-  noteIds: string[];
+  documentIds: string[];
   subtotal: number;
 }): Promise<
-  | { ok: true; coupon: CouponWithNotes; couponDiscount: number }
+  | { ok: true; coupon: CouponWithRelations; couponDiscount: number }
   | { ok: false; message: string }
 > {
   const coupon = await prisma.coupon.findUnique({
     where: { code: params.code.toUpperCase().trim() },
-    include: { couponNotes: true },
+    include: { couponNotes: true, couponPhysicalDocuments: true },
   });
 
   if (!coupon) return { ok: false, message: "Invalid coupon code." };
-  if (coupon.appliesTo === "PHYSICAL") {
-    return { ok: false, message: "This coupon applies to physical document orders only." };
+  if (!appliesToPhysical(coupon.appliesTo)) {
+    return { ok: false, message: "This coupon does not apply to physical documents." };
   }
   if (coupon.status !== "ACTIVE") return { ok: false, message: "This coupon is not active." };
 
@@ -40,15 +47,15 @@ export async function validateCouponForCart(params: {
     };
   }
 
-  if (coupon.couponNotes.length > 0) {
-    const allowed = new Set(coupon.couponNotes.map((n) => n.noteId));
-    const allAllowed = params.noteIds.every((id) => allowed.has(id));
+  if (coupon.couponPhysicalDocuments.length > 0) {
+    const allowed = new Set(coupon.couponPhysicalDocuments.map((n) => n.physicalDocumentId));
+    const allAllowed = params.documentIds.every((id) => allowed.has(id));
     if (!allAllowed) {
       return { ok: false, message: "Coupon does not apply to all items in your cart." };
     }
   }
 
-  const existing = await prisma.couponRedemption.findUnique({
+  const existing = await prisma.physicalCouponRedemption.findUnique({
     where: {
       userId_couponId: { userId: params.userId, couponId: coupon.id },
     },

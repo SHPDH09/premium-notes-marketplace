@@ -18,6 +18,10 @@ export async function GET() {
     recentStudents,
     recentTransactions,
     topNotes,
+    totalPhysicalOrders,
+    paidPhysicalOrders,
+    physicalRevenueAgg,
+    printingQueueCount,
   ] = await Promise.all([
     prisma.user.count({ where: { role: "STUDENT" } }),
     prisma.note.count(),
@@ -49,6 +53,15 @@ export async function GET() {
       take: 5,
       orderBy: { purchaseCount: "desc" },
     }),
+    prisma.physicalOrder.count(),
+    prisma.physicalOrder.count({ where: { paymentStatus: "SUCCESS" } }),
+    prisma.physicalOrder.aggregate({
+      where: { paymentStatus: "SUCCESS" },
+      _sum: { totalAmount: true },
+    }),
+    prisma.printingJob.count({
+      where: { status: { in: ["PENDING_PRINT", "PRINTING", "QC_PENDING"] } },
+    }),
   ]);
 
   return NextResponse.json({
@@ -59,6 +72,10 @@ export async function GET() {
       totalRevenue: decimalToNumber(revenueAgg._sum.totalAmount ?? 0),
       totalTransactions,
       activeCoupons,
+      totalPhysicalOrders,
+      paidPhysicalOrders,
+      physicalRevenue: decimalToNumber(physicalRevenueAgg._sum.totalAmount ?? 0),
+      printingQueueCount,
     },
     recentPurchases: recentPurchases.map((p) => ({
       id: p.id,
