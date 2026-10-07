@@ -8,7 +8,7 @@ import { generatePhysicalOrderNumber } from "@/lib/physical/order-number";
 import { getPhysicalCartSummary } from "@/lib/physical/cart-server";
 import { validateCouponForPhysicalCart } from "@/lib/physical/coupon";
 import { getShippingSettings, estimateExpectedDelivery } from "@/lib/physical/shipping";
-import { canTransitionFulfillment } from "@/lib/physical/status-machine";
+import { canAdminAdvanceFulfillment } from "@/lib/physical/status-machine";
 import { emitPhysicalNotification } from "@/lib/physical/notifications";
 import { validateIndianPincode, validateIndianPhone, normalizePhone } from "@/lib/physical/validation";
 import { createCashfreeOrder } from "@/lib/payment/cashfree";
@@ -253,7 +253,7 @@ export async function updatePhysicalFulfillmentStatus(
 ) {
   const order = await prisma.physicalOrder.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("Order not found");
-  if (!canTransitionFulfillment(order.fulfillmentStatus, to)) {
+  if (!canAdminAdvanceFulfillment(order.fulfillmentStatus, to)) {
     throw new Error(`Cannot change status from ${order.fulfillmentStatus} to ${to}`);
   }
 

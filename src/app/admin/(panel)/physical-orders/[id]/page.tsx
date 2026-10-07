@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { PhysicalFulfillmentStatus } from "@prisma/client";
@@ -24,12 +25,24 @@ export default function AdminPhysicalOrderDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const [order, setOrder] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
   const [tracking, setTracking] = useState({ courierName: "", trackingNumber: "", trackingUrl: "" });
 
   async function load() {
-    const res = await fetch(`/api/admin/physical-orders/${id}`);
+    const res = await fetch(`/api/admin/physical-orders/${id}`, { credentials: "include" });
     const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error ?? "Could not load order");
+      return;
+    }
     setOrder(data.order);
+    if (data.order) {
+      setTracking({
+        courierName: data.order.courierName ?? "",
+        trackingNumber: data.order.trackingNumber ?? "",
+        trackingUrl: data.order.trackingUrl ?? "",
+      });
+    }
   }
 
   useEffect(() => {
@@ -37,15 +50,32 @@ export default function AdminPhysicalOrderDetailPage() {
   }, [id]);
 
   async function patch(body: unknown) {
-    const res = await fetch(`/api/admin/physical-orders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error ?? "Failed");
-    toast.success("Updated");
-    setOrder(data.order);
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/physical-orders/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Update failed");
+        return;
+      }
+      toast.success("Order updated");
+      setOrder(data.order);
+      if (data.order) {
+        setTracking({
+          courierName: data.order.courierName ?? tracking.courierName,
+          trackingNumber: data.order.trackingNumber ?? tracking.trackingNumber,
+          trackingUrl: data.order.trackingUrl ?? tracking.trackingUrl,
+        });
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (!order) return <p>Loading…</p>;
@@ -55,7 +85,14 @@ export default function AdminPhysicalOrderDetailPage() {
       <div className="flex flex-wrap justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{order.orderNumber}</h1>
-          <p className="text-slate-500">{order.studentName} · {order.studentPhone}</p>
+          <p className="text-slate-500">
+            {order.studentName} · {order.studentPhone}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Badge variant="default">Fulfillment: {order.fulfillmentLabel}</Badge>
+            <Badge variant="warning">Print: {order.printStatusLabel}</Badge>
+            <Badge variant="success">Payment: {order.paymentStatus}</Badge>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
@@ -80,8 +117,9 @@ export default function AdminPhysicalOrderDetailPage() {
             <Button
               key={a.status}
               size="sm"
-              variant="outline"
-              onClick={() => patch({ action: "fulfillment", status: a.status })}
+              variant={order.fulfillmentStatus === a.status ? "default" : "outline"}
+              disabled={busy}
+              onClick={() => void patch({ action: "fulfillment", status: a.status })}
             >
               {a.label}
             </Button>
@@ -94,23 +132,49 @@ export default function AdminPhysicalOrderDetailPage() {
           <CardTitle>Printing</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => patch({ action: "print", status: "PRINTING" })}>
+          <Button
+            size="sm"
+            disabled={busy}
+            onClick={() => void patch({ action: "print", status: "PRINTING" })}
+          >
             Start print job
           </Button>
-          <Button size="sm" variant="outline" onClick={() => patch({ action: "print", status: "PRINTED" })}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void patch({ action: "print", status: "PRINTED" })}
+          >
             Mark printed
           </Button>
-          <Button size="sm" variant="outline" onClick={() => patch({ action: "print", status: "QC_PASSED" })}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void patch({ action: "print", status: "QC_PASSED" })}
+          >
             QC pass
           </Button>
           <Button
             size="sm"
             variant="outline"
-            onClick={() => patch({ action: "print", status: "QC_FAILED", qcReason: "Poor print quality" })}
+            disabled={busy}
+            onClick={() =>
+              void patch({
+                action: "print",
+                status: "QC_FAILED",
+                qcReason: "Poor print quality",
+              })
+            }
           >
             QC fail
           </Button>
-          <Button size="sm" variant="outline" onClick={() => patch({ action: "pack", packageCount: 1 })}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void patch({ action: "pack", packageCount: 1 })}
+          >
             Mark packed
           </Button>
         </CardContent>
@@ -124,26 +188,30 @@ export default function AdminPhysicalOrderDetailPage() {
           <Input
             placeholder="Courier"
             value={tracking.courierName}
+            disabled={busy}
             onChange={(e) => setTracking((t) => ({ ...t, courierName: e.target.value }))}
           />
           <Input
             placeholder="Tracking #"
             value={tracking.trackingNumber}
+            disabled={busy}
             onChange={(e) => setTracking((t) => ({ ...t, trackingNumber: e.target.value }))}
           />
           <Input
-            placeholder="Tracking URL"
+            placeholder="Tracking URL (optional)"
             value={tracking.trackingUrl}
+            disabled={busy}
             onChange={(e) => setTracking((t) => ({ ...t, trackingUrl: e.target.value }))}
           />
           <Button
             className="sm:col-span-3"
+            disabled={busy}
             onClick={() =>
-              patch({
+              void patch({
                 action: "shipment",
-                courierName: tracking.courierName,
-                trackingNumber: tracking.trackingNumber,
-                trackingUrl: tracking.trackingUrl || undefined,
+                courierName: tracking.courierName.trim(),
+                trackingNumber: tracking.trackingNumber.trim(),
+                trackingUrl: tracking.trackingUrl.trim() || undefined,
               })
             }
           >

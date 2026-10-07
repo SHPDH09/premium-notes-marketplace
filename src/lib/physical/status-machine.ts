@@ -22,6 +22,24 @@ export function canTransitionFulfillment(
   return FULFILLMENT_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
+/** Admin may skip intermediate steps (e.g. jump to Shipped) but not go backwards in the timeline. */
+export function canAdminAdvanceFulfillment(
+  from: PhysicalFulfillmentStatus,
+  to: PhysicalFulfillmentStatus
+): boolean {
+  if (from === to) return true;
+  if (to === "CANCELLED" || to === "RETURNED") {
+    return canTransitionFulfillment(from, to);
+  }
+  if (from === "CANCELLED" || from === "RETURNED") return false;
+
+  const fromIdx = TIMELINE_STATUSES.indexOf(from);
+  const toIdx = TIMELINE_STATUSES.indexOf(to);
+  if (fromIdx >= 0 && toIdx >= 0) return toIdx >= fromIdx;
+
+  return canTransitionFulfillment(from, to);
+}
+
 export const STUDENT_CANCELLABLE: PhysicalFulfillmentStatus[] = [
   "ORDER_PLACED",
   "PAYMENT_CONFIRMED",

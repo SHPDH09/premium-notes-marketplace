@@ -52,7 +52,7 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("shipment"),
     courierName: z.string().min(1),
     trackingNumber: z.string().min(1),
-    trackingUrl: z.string().url().optional(),
+    trackingUrl: z.union([z.string().url(), z.literal("")]).optional(),
     expectedDeliveryDate: z.string().optional(),
   }),
   z.object({
@@ -72,7 +72,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const adminId = auth.session!.user.id;
 
   const parsed = actionSchema.safeParse(await req.json());
-  if (!parsed.success) return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "Invalid action";
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
 
   const order = await prisma.physicalOrder.findUnique({ where: { id: params.id } });
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -83,18 +86,35 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body.action === "fulfillment") {
       await updatePhysicalFulfillmentStatus(params.id, body.status, adminId, body.note);
     } else if (body.action === "print") {
+      const fulfillmentForPrint =
+        body.status === "PRINTING" || body.status === "PRINTED"
+          ? body.status === "PRINTING"
+            ? "PRINTING"
+            : "QUALITY_CHECK"
+          : body.status === "QC_PENDING" ||
+              body.status === "QC_PASSED" ||
+              body.status === "QC_FAILED" ||
+              body.status === "REPRINT_REQUIRED"
+            ? "QUALITY_CHECK"
+            : order.fulfillmentStatus;
+
+      if (fulfillmentForPrint !== order.fulfillmentStatus) {
+        await updatePhysicalFulfillmentStatus(
+          params.id,
+          fulfillmentForPrint,
+          adminId,
+          `Print workflow: ${body.status}`
+        );
+      }
+
       await prisma.$transaction(async (tx) => {
+        const fresh = await tx.physicalOrder.findUnique({ where: { id: params.id } });
         await tx.physicalOrder.update({
           where: { id: params.id },
           data: {
             printStatus: body.status,
             qcFailureReason: body.qcReason ?? null,
-            fulfillmentStatus:
-              body.status === "PRINTING"
-                ? "PRINTING"
-                : body.status === "QC_PENDING" || body.status === "QC_PASSED" || body.status === "QC_FAILED"
-                  ? "QUALITY_CHECK"
-                  : order.fulfillmentStatus,
+            fulfillmentStatus: fresh?.fulfillmentStatus ?? fulfillmentForPrint,
           },
         });
         await tx.printingJob.upsert({
@@ -114,11 +134,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         await appendStatusHistory(tx, params.id, `PRINT:${body.status}`, body.qcReason, adminId);
       });
     } else if (body.action === "pack") {
+      await updatePhysicalFulfillmentStatus(params.id, "PACKED", adminId, body.packagingNotes);
       await prisma.$transaction(async (tx) => {
         await tx.physicalOrder.update({
           where: { id: params.id },
           data: {
-            fulfillmentStatus: "PACKED",
             shippingStatus: "PACKED",
             packageWeight: body.packageWeight,
             packageDimensions: body.packageDimensions,
@@ -126,19 +146,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             packagingNotes: body.packagingNotes,
           },
         });
-        await appendStatusHistory(tx, params.id, "PACKED", body.packagingNotes, adminId);
       });
     } else if (body.action === "shipment") {
       const expected = body.expectedDeliveryDate ? new Date(body.expectedDeliveryDate) : null;
+      const trackingUrl =
+        body.trackingUrl && body.trackingUrl.length > 0 ? body.trackingUrl : undefined;
+
+      await updatePhysicalFulfillmentStatus(
+        params.id,
+        "SHIPPED",
+        adminId,
+        body.trackingNumber
+      );
+
       await prisma.$transaction(async (tx) => {
         await tx.physicalOrder.update({
           where: { id: params.id },
           data: {
-            fulfillmentStatus: "SHIPPED",
             shippingStatus: "SHIPPED",
             courierName: body.courierName,
             trackingNumber: body.trackingNumber,
-            trackingUrl: body.trackingUrl ?? null,
+            trackingUrl: trackingUrl ?? null,
             shippingDate: new Date(),
             expectedDelivery: expected,
           },
@@ -149,7 +177,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             orderId: params.id,
             courierName: body.courierName,
             trackingNumber: body.trackingNumber,
-            trackingUrl: body.trackingUrl,
+            trackingUrl,
             shippingDate: new Date(),
             expectedDeliveryDate: expected,
             shippingStatus: "SHIPPED",
@@ -157,13 +185,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           update: {
             courierName: body.courierName,
             trackingNumber: body.trackingNumber,
-            trackingUrl: body.trackingUrl,
+            trackingUrl,
             shippingDate: new Date(),
             expectedDeliveryDate: expected,
             shippingStatus: "SHIPPED" as PhysicalShippingStatus,
           },
         });
-        await appendStatusHistory(tx, params.id, "SHIPPED", body.trackingNumber, adminId);
       });
     } else if (body.action === "refund") {
       await refundPhysicalOrder(params.id, body.amount, body.reason, adminId);
