@@ -56,18 +56,27 @@ export function serializePhysicalDocumentPublic(
   };
 }
 
-export function serializePhysicalDocumentAdmin(doc: PhysicalDocument) {
+export function serializePhysicalDocumentAdmin(
+  doc: PhysicalDocument,
+  sourceNote?: Note | null
+) {
+  const publicFields = serializePhysicalDocumentPublic(doc, sourceNote);
+  const printingCost = decimalToNumber(doc.printingCost);
+  const pages = publicFields.pageCount ?? 0;
   return {
-    ...serializePhysicalDocumentPublic(doc),
+    ...publicFields,
     name: doc.name,
     description: doc.description,
-    printingCost: decimalToNumber(doc.printingCost),
+    printingCost,
     bindingCost: decimalToNumber(doc.bindingCost),
     packagingCost: decimalToNumber(doc.packagingCost),
     basePrice: decimalToNumber(doc.basePrice),
     priceOverride: doc.priceOverride,
     coverStorageKey: doc.coverStorageKey,
     sourcePdfKey: doc.sourcePdfKey ? "[stored]" : null,
+    sourceNotePageCount: sourceNote?.pdfPageCount ?? null,
+    pricePerPage:
+      pages > 0 ? Math.round((printingCost / pages) * 100) / 100 : null,
   };
 }
 

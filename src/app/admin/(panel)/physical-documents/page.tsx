@@ -63,6 +63,8 @@ export default function AdminPhysicalDocumentsPage() {
             <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
                 <th className="px-4 py-3">Title</th>
+                <th className="px-4 py-3">Pages</th>
+                <th className="px-4 py-3">₹/page</th>
                 <th className="px-4 py-3">Price/copy</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Actions</th>
@@ -72,6 +74,17 @@ export default function AdminPhysicalDocumentsPage() {
               {docs.map((d) => (
                 <tr key={d.id} className="border-t">
                   <td className="px-4 py-3">{d.title}</td>
+                  <td className="px-4 py-3">
+                    {d.pageCount ?? "—"}
+                    {d.sourceNotePageCount != null && d.sourceNotePageCount !== d.pageCount && (
+                      <span className="block text-xs text-slate-400">
+                        Note PDF: {d.sourceNotePageCount}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {d.pricePerPage != null ? formatCurrency(d.pricePerPage) : "—"}
+                  </td>
                   <td className="px-4 py-3">{formatCurrency(d.finalPrice)}</td>
                   <td className="px-4 py-3">{d.status}</td>
                   <td className="px-4 py-3 flex gap-2">

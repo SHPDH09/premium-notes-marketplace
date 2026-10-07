@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get("status");
 
   const docs = await prisma.physicalDocument.findMany({
+    include: { sourceNote: true },
     where: {
       ...(q
         ? {
@@ -28,7 +29,9 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ documents: docs.map(serializePhysicalDocumentAdmin) });
+  return NextResponse.json({
+    documents: docs.map((d) => serializePhysicalDocumentAdmin(d, d.sourceNote)),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -88,5 +91,16 @@ export async function POST(req: NextRequest) {
     newValue: doc.title,
   });
 
-  return NextResponse.json({ document: serializePhysicalDocumentAdmin(doc) }, { status: 201 });
+  const created = await prisma.physicalDocument.findUnique({
+    where: { id: doc.id },
+    include: { sourceNote: true },
+  });
+  return NextResponse.json(
+    {
+      document: created
+        ? serializePhysicalDocumentAdmin(created, created.sourceNote)
+        : serializePhysicalDocumentAdmin(doc),
+    },
+    { status: 201 }
+  );
 }

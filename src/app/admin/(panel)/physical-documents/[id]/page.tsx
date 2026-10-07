@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhysicalPagePricingFields } from "@/components/admin/physical-page-pricing";
 import { toast } from "sonner";
 
 export default function EditPhysicalDocumentPage() {
@@ -23,10 +24,31 @@ export default function EditPhysicalDocumentPage() {
     const res = await fetch(`/api/admin/physical-documents/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        sourceNoteId: form.sourceNoteId,
+        name: form.name ?? form.title,
+        title: form.title,
+        description: form.description,
+        pageCount: form.pageCount,
+        printingCost: form.printingCost,
+        bindingCost: form.bindingCost,
+        packagingCost: form.packagingCost,
+        basePrice: form.basePrice,
+        paperSize: form.paperSize,
+        paperType: form.paperType,
+        printType: form.printType,
+        bindingType: form.bindingType,
+        minQuantity: form.minQuantity,
+        maxQuantity: form.maxQuantity,
+        processingDays: form.processingDays,
+        status: form.status,
+        priceOverride: form.priceOverride,
+      }),
     });
     if (!res.ok) return toast.error("Save failed");
     toast.success("Saved");
+    const data = await res.json();
+    setForm(data.document);
   }
 
   async function sourcePdf() {
@@ -37,6 +59,9 @@ export default function EditPhysicalDocumentPage() {
   }
 
   if (!form) return <p>Loading…</p>;
+
+  const noteTotalPages =
+    form.sourceNotePageCount ?? form.linkedNote?.pdfPageCount ?? null;
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
@@ -52,6 +77,28 @@ export default function EditPhysicalDocumentPage() {
           onChange={(e) => setForm({ ...form, description: e.target.value })}
         />
       </div>
+
+      <PhysicalPagePricingFields
+        noteTotalPages={noteTotalPages}
+        value={{
+          pageCount: form.pageCount ?? 1,
+          printingCost: form.printingCost ?? 0,
+          bindingCost: form.bindingCost ?? 0,
+          packagingCost: form.packagingCost ?? 0,
+          basePrice: form.basePrice ?? 0,
+        }}
+        onChange={(next) =>
+          setForm({
+            ...form,
+            pageCount: next.pageCount,
+            printingCost: next.printingCost,
+            bindingCost: next.bindingCost,
+            packagingCost: next.packagingCost,
+            basePrice: next.basePrice,
+          })
+        }
+      />
+
       <Button variant="outline" onClick={() => void sourcePdf()}>
         Open source PDF (admin)
       </Button>

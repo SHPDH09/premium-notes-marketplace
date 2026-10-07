@@ -10,9 +10,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
 
-  const doc = await prisma.physicalDocument.findUnique({ where: { id: params.id } });
+  const doc = await prisma.physicalDocument.findUnique({
+    where: { id: params.id },
+    include: { sourceNote: true },
+  });
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ document: serializePhysicalDocumentAdmin(doc) });
+  return NextResponse.json({
+    document: serializePhysicalDocumentAdmin(doc, doc.sourceNote),
+  });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -64,7 +69,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     newValue: doc.title,
   });
 
-  return NextResponse.json({ document: serializePhysicalDocumentAdmin(doc) });
+  const withNote = await prisma.physicalDocument.findUnique({
+    where: { id: params.id },
+    include: { sourceNote: true },
+  });
+  return NextResponse.json({
+    document: withNote
+      ? serializePhysicalDocumentAdmin(withNote, withNote.sourceNote)
+      : serializePhysicalDocumentAdmin(doc),
+  });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {

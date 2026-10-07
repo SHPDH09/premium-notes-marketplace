@@ -87,7 +87,9 @@ export function PhysicalDocumentCard({
           <p className="mt-1 line-clamp-2 text-sm text-slate-500">{doc.description}</p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-          {doc.pageCount != null && <span>{doc.pageCount} pages</span>}
+          {doc.pageCount != null && (
+            <span className="font-medium text-slate-700">{doc.pageCount} total pages</span>
+          )}
           {doc.purchaseCount != null && doc.purchaseCount > 0 && (
             <span>{doc.purchaseCount} digital sales</span>
           )}
