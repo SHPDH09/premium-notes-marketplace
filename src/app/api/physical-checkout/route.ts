@@ -4,6 +4,7 @@ import { createPhysicalCheckoutOrder } from "@/lib/physical/orders";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { resolveAppBaseUrl } from "@/lib/app-url";
 
 const schema = z.object({
   acceptedLegal: z.literal(true),
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
       addressId: parsed.data.addressId,
       idempotencyKey: parsed.data.idempotencyKey ?? randomUUID(),
       acceptedLegal: true,
+      appBaseUrl: resolveAppBaseUrl(req),
     });
 
     if ("existing" in result && result.existing) {

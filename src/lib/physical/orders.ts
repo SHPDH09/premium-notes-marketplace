@@ -12,7 +12,9 @@ import { canAdminAdvanceFulfillment } from "@/lib/physical/status-machine";
 import { emitPhysicalNotification } from "@/lib/physical/notifications";
 import { validateIndianPincode, validateIndianPhone, normalizePhone } from "@/lib/physical/validation";
 import { createCashfreeOrder } from "@/lib/payment/cashfree";
+import { physicalCheckoutReturnUrl } from "@/lib/payment/return-url";
 import { roundMoney } from "@/lib/pricing";
+import { resolveAppBaseUrl } from "@/lib/app-url";
 
 export type DeliveryAddressInput = {
   fullName: string;
@@ -210,10 +212,7 @@ export async function createPhysicalCheckoutOrder(params: {
 
   emitPhysicalNotification("order_placed", { orderId: order.id, orderNumber });
 
-  const baseUrl =
-    params.appBaseUrl?.replace(/\/$/, "") ??
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-    "http://localhost:3000";
+  const baseUrl = params.appBaseUrl?.replace(/\/$/, "") ?? resolveAppBaseUrl(null);
 
   if (cart.total <= 0) {
     await fulfillSuccessfulPhysicalOrder(order.id, `free_${order.id}`);
@@ -234,7 +233,7 @@ export async function createPhysicalCheckoutOrder(params: {
     customerEmail: params.userEmail,
     customerPhone: params.userPhone ?? params.address.phone,
     customerName: params.userName,
-    returnUrl: `${baseUrl}/physical-checkout/success?order_id=${order.id}`,
+    returnUrl: physicalCheckoutReturnUrl(baseUrl, order.id),
     notifyUrl: `${baseUrl}/api/payments/webhook`,
   });
 

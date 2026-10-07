@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { getCartSummary } from "@/lib/cart-server";
 import { validateCouponForCart } from "@/lib/coupon";
 import { roundMoney } from "@/lib/pricing";
+import { digitalCheckoutReturnUrl } from "@/lib/payment/return-url";
 import { generatePaymentOrderId } from "@/lib/orders";
 import { createCashfreeOrder } from "@/lib/payment/cashfree";
 
@@ -93,7 +94,7 @@ export async function createCheckoutOrder(
     customerEmail: userEmail,
     customerPhone: userPhone,
     customerName,
-    returnUrl: `${baseUrl}/checkout/success?order_id=${order.id}`,
+    returnUrl: digitalCheckoutReturnUrl(baseUrl, order.id),
     notifyUrl: `${baseUrl}/api/payments/webhook`,
   });
 

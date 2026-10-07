@@ -12,9 +12,24 @@ export default function PhysicalInvoicePage() {
   const [order, setOrder] = useState<any>(null);
 
   useEffect(() => {
-    void fetch(`/api/physical-orders/${id}`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((d) => setOrder(d.order));
+    async function load() {
+      const res = await fetch(`/api/physical-orders/${id}`, { credentials: "include" });
+      const data = await res.json();
+      let orderData = data.order;
+      if (orderData?.paymentStatus === "PENDING") {
+        await fetch("/api/payments/verify-physical", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ physicalOrderId: id }),
+        });
+        const again = await fetch(`/api/physical-orders/${id}`, { credentials: "include" });
+        const refreshed = await again.json();
+        orderData = refreshed.order ?? orderData;
+      }
+      setOrder(orderData);
+    }
+    void load();
   }, [id]);
 
   if (!order) return <p className="p-8 text-center">Loading invoice…</p>;
@@ -77,7 +92,14 @@ export default function PhysicalInvoicePage() {
           )}
           <p>Delivery: {formatCurrency(order.deliveryCharge)}</p>
           <p className="text-lg font-bold">Total: {formatCurrency(order.totalAmount)}</p>
-          <p className="text-slate-500">Payment: {order.paymentStatus}</p>
+          <p className="text-slate-500">
+            Payment:{" "}
+            {order.paymentStatus === "SUCCESS"
+              ? "Paid"
+              : order.paymentStatus === "PENDING"
+                ? "Pending confirmation"
+                : order.paymentStatus}
+          </p>
         </div>
       </div>
     </div>

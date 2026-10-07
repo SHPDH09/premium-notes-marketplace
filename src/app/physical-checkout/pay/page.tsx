@@ -51,7 +51,9 @@ function PayContent() {
         <button
           type="button"
           className="mt-8 text-sm text-indigo-600 underline"
-          onClick={() => router.push(`/physical-checkout/success?order_id=${orderId}`)}
+          onClick={() =>
+            router.push(`/physical-checkout/success?physical_order_id=${encodeURIComponent(orderId ?? "")}`)
+          }
         >
           I completed payment
         </button>

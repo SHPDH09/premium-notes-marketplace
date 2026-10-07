@@ -9,15 +9,21 @@ import { toast } from "sonner";
 
 function SuccessContent() {
   const params = useSearchParams();
-  const orderId = params.get("order_id");
+  const appOrderId = params.get("app_order_id");
+  const orderIdParam = params.get("order_id");
+  const orderId = appOrderId ?? orderIdParam;
   const [status, setStatus] = useState("Verifying payment...");
 
   useEffect(() => {
     if (!orderId) return;
     fetch("/api/payments/verify", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId }),
+      body: JSON.stringify({
+        appOrderId: appOrderId ?? undefined,
+        orderId: orderId ?? undefined,
+      }),
     })
       .then((r) => r.json())
       .then((d) => {
@@ -28,7 +34,7 @@ function SuccessContent() {
           setStatus(d.status ?? "PENDING");
         }
       });
-  }, [orderId]);
+  }, [orderId, appOrderId]);
 
   return (
     <div className="mx-auto max-w-lg px-4 py-20 text-center">

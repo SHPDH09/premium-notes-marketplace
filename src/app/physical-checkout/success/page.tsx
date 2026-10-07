@@ -1,32 +1,67 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { Button } from "@/components/ui/button";
-import { readJsonResponse } from "@/lib/api/fetch-json";
+import { verifyPhysicalPayment } from "@/lib/physical/verify-payment-client";
 
 function SuccessContent() {
   const params = useSearchParams();
-  const orderId = params.get("order_id");
+  const physicalOrderId = params.get("physical_order_id");
+  const orderIdParam = params.get("order_id");
+
+  const verifyPayload = useMemo(
+    () => ({
+      physicalOrderId,
+      cashfreeOrderId: physicalOrderId ? orderIdParam : null,
+      orderId: physicalOrderId ? null : orderIdParam,
+    }),
+    [physicalOrderId, orderIdParam]
+  );
+
+  const [resolvedOrderId, setResolvedOrderId] = useState<string | null>(physicalOrderId);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [status, setStatus] = useState("verifying");
+  const [status, setStatus] = useState<"verifying" | "success" | "pending">("verifying");
 
   useEffect(() => {
-    if (!orderId) return;
-    void (async () => {
-      const res = await fetch("/api/payments/verify-physical", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
-      });
-      const data = await readJsonResponse(res);
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 15;
+
+    async function runVerify() {
+      if (!verifyPayload.physicalOrderId && !verifyPayload.orderId && !verifyPayload.cashfreeOrderId) {
+        setStatus("pending");
+        return;
+      }
+
+      const data = await verifyPhysicalPayment(verifyPayload);
+      if (cancelled) return;
+
+      if (typeof data.orderId === "string") setResolvedOrderId(data.orderId);
       if (typeof data.orderNumber === "string") setOrderNumber(data.orderNumber);
-      setStatus(data.status === "SUCCESS" ? "success" : "pending");
-    })();
-  }, [orderId]);
+
+      if (data.status === "SUCCESS") {
+        setStatus("success");
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        window.setTimeout(() => void runVerify(), 2000);
+      } else {
+        setStatus("pending");
+      }
+    }
+
+    void runVerify();
+    return () => {
+      cancelled = true;
+    };
+  }, [verifyPayload]);
+
+  const viewOrderHref = resolvedOrderId ? `/physical-orders/${resolvedOrderId}` : "/physical-orders";
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16 text-center">
@@ -37,11 +72,16 @@ function SuccessContent() {
       <p className="mt-4 text-slate-600">
         {status === "success"
           ? "Your physical order has been placed. We will notify you as it progresses."
-          : "If you completed payment, confirmation may take a moment."}
+          : status === "verifying"
+            ? "Confirming your payment with the bank…"
+            : "If you completed payment, confirmation may take a moment. Refresh this page or open your order below."}
       </p>
       <div className="mt-8 flex flex-col gap-2">
         <Button asChild>
-          <Link href="/physical-orders">View order</Link>
+          <Link href={viewOrderHref}>View order</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/physical-orders">All physical orders</Link>
         </Button>
       </div>
     </div>
