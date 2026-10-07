@@ -12,6 +12,7 @@ import { canAdminAdvanceFulfillment } from "@/lib/physical/status-machine";
 import { emitPhysicalNotification } from "@/lib/physical/notifications";
 import { validateIndianPincode, validateIndianPhone, normalizePhone } from "@/lib/physical/validation";
 import { createCashfreeOrder } from "@/lib/payment/cashfree";
+import { roundMoney } from "@/lib/pricing";
 
 export type DeliveryAddressInput = {
   fullName: string;
@@ -275,13 +276,32 @@ export async function refundPhysicalOrder(
   reason: string,
   adminId: string
 ) {
-  const order = await prisma.physicalOrder.findUnique({ where: { id: orderId } });
+  const order = await prisma.physicalOrder.findUnique({
+    where: { id: orderId },
+    include: { refunds: true, history: true },
+  });
   if (!order) throw new Error("Order not found");
   if (order.paymentStatus !== "SUCCESS" && order.paymentStatus !== "PARTIALLY_REFUNDED") {
     throw new Error("Only paid orders can be refunded.");
   }
+
+  const { physicalRefundSummary } = await import("@/lib/physical/refund");
+  const summary = physicalRefundSummary(order, order.refunds, order.history);
+  if (!summary.refundWindowOpen) {
+    throw new Error(
+      `Refunds are not available more than ${summary.refundWindowHours} hours after payment.`
+    );
+  }
+  if (amount <= 0) throw new Error("Refund amount must be greater than zero.");
+  if (amount > summary.refundableRemaining + 0.001) {
+    throw new Error(
+      `Refund amount cannot exceed ${summary.refundableRemaining.toFixed(2)} (after ${summary.platformFeePercent}% platform fee).`
+    );
+  }
+
   const total = decimalToNumber(order.totalAmount);
-  if (amount <= 0 || amount > total) throw new Error("Invalid refund amount.");
+  const alreadyRefunded = summary.refundedAmount;
+  if (amount > summary.refundableRemaining) amount = summary.refundableRemaining;
 
   let paymentRefundId: string | undefined;
   const skipGateway =
@@ -310,11 +330,19 @@ export async function refundPhysicalOrder(
         approvedBy: adminId,
       },
     });
+    const newRefundedTotal = roundMoney(alreadyRefunded + amount);
+    const { isOrderFullyRefundedByPolicy } = await import("@/lib/refund-policy");
+    const fullyRefunded = isOrderFullyRefundedByPolicy(total, newRefundedTotal);
+
     await tx.physicalOrder.update({
       where: { id: orderId },
       data: {
-        paymentStatus: amount >= total ? "REFUNDED" : "PARTIALLY_REFUNDED",
+        paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED",
         refundStatus: "REFUNDED",
+        fulfillmentStatus:
+          fullyRefunded && order.fulfillmentStatus !== "DELIVERED"
+            ? "CANCELLED"
+            : order.fulfillmentStatus,
       },
     });
     await appendStatusHistory(tx, orderId, "REFUNDED", reason, adminId);

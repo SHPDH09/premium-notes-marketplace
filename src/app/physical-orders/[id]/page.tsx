@@ -7,7 +7,7 @@ import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { PaymentStatusBadge, FulfillmentStatusBadge } from "@/components/physical/status-badge";
-import { PhysicalOrderTimeline } from "@/components/physical/order-timeline";
+import { PhysicalOrderJourney } from "@/components/physical/order-journey";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -74,12 +74,15 @@ export default function PhysicalOrderDetailPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Tracking</CardTitle>
+              <CardTitle>Order status & history</CardTitle>
             </CardHeader>
             <CardContent>
-              <PhysicalOrderTimeline current={order.fulfillmentStatus} history={order.history} />
+              <PhysicalOrderJourney
+                fulfillmentStatus={order.fulfillmentStatus}
+                history={order.history}
+              />
             </CardContent>
           </Card>
           <Card>

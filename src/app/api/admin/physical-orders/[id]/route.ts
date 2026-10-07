@@ -223,6 +223,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         history: { orderBy: { createdAt: "asc" } },
         printingJob: true,
         shipment: true,
+        refunds: true,
       },
     });
 

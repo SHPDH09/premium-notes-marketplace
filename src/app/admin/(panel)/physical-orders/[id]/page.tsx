@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { PhysicalFulfillmentStatus } from "@prisma/client";
+import { PhysicalOrderJourney } from "@/components/physical/order-journey";
 
 const actions: { label: string; status: PhysicalFulfillmentStatus }[] = [
   { label: "Start processing", status: "PROCESSING" },
@@ -27,6 +29,8 @@ export default function AdminPhysicalOrderDetailPage() {
   const [order, setOrder] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   const [tracking, setTracking] = useState({ courierName: "", trackingNumber: "", trackingUrl: "" });
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
 
   async function load() {
     const res = await fetch(`/api/admin/physical-orders/${id}`, { credentials: "include" });
@@ -107,6 +111,18 @@ export default function AdminPhysicalOrderDetailPage() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Order journey & transitions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PhysicalOrderJourney
+            fulfillmentStatus={order.fulfillmentStatus}
+            history={order.history ?? []}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -221,11 +237,115 @@ export default function AdminPhysicalOrderDetailPage() {
       </Card>
 
       <Card>
-        <CardContent className="p-4 text-sm">
-          <p className="font-semibold">Total {formatCurrency(order.totalAmount)}</p>
-          <p>Payment: {order.paymentStatus}</p>
+        <CardHeader>
+          <CardTitle>Payment & refund</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div>
+            <p className="font-semibold">Total {formatCurrency(order.totalAmount)}</p>
+            <p>Payment: {order.paymentStatus}</p>
+            {order.refundedAmount > 0 && (
+              <p className="text-amber-700">
+                Refunded {formatCurrency(order.refundedAmount)}
+                {order.refundableRemaining > 0
+                  ? ` · ${formatCurrency(order.refundableRemaining)} refundable left`
+                  : ""}
+              </p>
+            )}
+          </div>
+          {order.refunds?.length > 0 && (
+            <ul className="space-y-2 rounded-lg border border-slate-100 bg-slate-50/80 p-3">
+              {order.refunds.map((r: { id: string; amount: number; reason: string; at: string }) => (
+                <li key={r.id}>
+                  <span className="font-medium">{formatCurrency(r.amount)}</span>
+                  <span className="text-slate-500"> · {new Date(r.at).toLocaleString()}</span>
+                  <p className="text-slate-600">{r.reason}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-xs text-slate-500">
+            Refunds within 12 hours of payment. Max to customer after {order.platformFeePercent}%
+            platform fee.{" "}
+            <Link href="/privacy#refunds" className="text-indigo-600 hover:underline">
+              Policy
+            </Link>
+          </p>
+          {order.refundDeadline && order.paymentStatus === "SUCCESS" && (
+            <p className="text-xs text-slate-500">
+              {order.refundWindowOpen
+                ? `Refund window until ${new Date(order.refundDeadline).toLocaleString()}`
+                : "Refund window closed"}
+            </p>
+          )}
+          {order.canRefund && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="phy-refund-amount">Refund amount (₹)</Label>
+                <div className="mt-1 flex gap-2">
+                  <Input
+                    id="phy-refund-amount"
+                    type="number"
+                    min={0.01}
+                    step={0.01}
+                    max={order.refundableRemaining}
+                    value={refundAmount}
+                    disabled={busy}
+                    onChange={(e) => setRefundAmount(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => setRefundAmount(order.refundableRemaining.toFixed(2))}
+                  >
+                    Max
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="phy-refund-reason">Reason</Label>
+                <Input
+                  id="phy-refund-reason"
+                  className="mt-1"
+                  placeholder="Why refunding"
+                  value={refundReason}
+                  disabled={busy}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                />
+              </div>
+              <Button
+                className="sm:col-span-2"
+                variant="destructive"
+                disabled={busy}
+                onClick={() => {
+                  const amount = Number(refundAmount);
+                  const reason = refundReason.trim();
+                  if (!reason || reason.length < 3) {
+                    toast.error("Enter a refund reason (min 3 characters)");
+                    return;
+                  }
+                  if (!Number.isFinite(amount) || amount <= 0) {
+                    toast.error("Enter a valid refund amount");
+                    return;
+                  }
+                  if (amount > order.refundableRemaining + 0.001) {
+                    toast.error(`Max ${formatCurrency(order.refundableRemaining)}`);
+                    return;
+                  }
+                  void patch({ action: "refund", amount, reason }).then(() => {
+                    setRefundAmount("");
+                    setRefundReason("");
+                  });
+                }}
+              >
+                Process refund
+              </Button>
+            </div>
+          )}
           {order.address && (
-            <p className="mt-2 text-slate-600">
+            <p className="text-slate-600">
               Ship to: {order.address.addressLine1}, {order.address.city}, {order.address.pincode}
             </p>
           )}

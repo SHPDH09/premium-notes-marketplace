@@ -5,10 +5,12 @@ import {
   PhysicalOrderItem,
   PhysicalOrderAddress,
   PhysicalOrderStatusHistory,
+  PhysicalOrderRefund,
   UserAddress,
   PrintingJob,
   Shipment,
 } from "@prisma/client";
+import { physicalRefundSummary } from "@/lib/physical/refund";
 import { decimalToNumber } from "@/lib/utils";
 import { getPublicCoverUrl } from "@/lib/storage";
 import { fulfillmentLabel, printStatusLabel, shippingStatusLabel } from "@/lib/physical/status-machine";
@@ -84,11 +86,18 @@ type OrderWithRelations = PhysicalOrder & {
   items?: PhysicalOrderItem[];
   address?: PhysicalOrderAddress | null;
   history?: PhysicalOrderStatusHistory[];
+  refunds?: PhysicalOrderRefund[];
   printingJob?: PrintingJob | null;
   shipment?: Shipment | null;
 };
 
 export function serializePhysicalOrder(order: OrderWithRelations) {
+  const refundMeta = physicalRefundSummary(
+    order,
+    order.refunds ?? [],
+    order.history
+  );
+
   return {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -165,6 +174,20 @@ export function serializePhysicalOrder(order: OrderWithRelations) {
           shippingStatus: order.shipment.shippingStatus,
         }
       : null,
+    refunds:
+      order.refunds?.map((r) => ({
+        id: r.id,
+        amount: decimalToNumber(r.refundAmount),
+        reason: r.reason,
+        status: r.status,
+        at: r.createdAt.toISOString(),
+      })) ?? [],
+    refundedAmount: refundMeta.refundedAmount,
+    refundableRemaining: refundMeta.refundableRemaining,
+    canRefund: refundMeta.canRefund,
+    refundWindowOpen: refundMeta.refundWindowOpen,
+    refundDeadline: refundMeta.refundDeadline,
+    platformFeePercent: refundMeta.platformFeePercent,
   };
 }
 

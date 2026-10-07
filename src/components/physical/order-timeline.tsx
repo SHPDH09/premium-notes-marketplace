@@ -6,9 +6,28 @@ export function PhysicalOrderTimeline(props: {
   current: PhysicalFulfillmentStatus;
   history: { status: string; at: string }[];
 }) {
-  const historyByStatus = new Map<string, string>();
-  for (const h of props.history) {
-    if (!historyByStatus.has(h.status)) historyByStatus.set(h.status, h.at);
+  function timeForStep(step: PhysicalFulfillmentStatus): string | undefined {
+    for (const h of props.history) {
+      if (h.status === step) return h.at;
+    }
+    if (step === "PRINTING") {
+      const p = props.history.find((h) => h.status === "PRINT:PRINTING" || h.status === "PRINTING");
+      if (p) return p.at;
+    }
+    if (step === "QUALITY_CHECK") {
+      const p = props.history.find(
+        (h) =>
+          h.status.startsWith("PRINT:QC") ||
+          h.status === "QUALITY_CHECK" ||
+          h.status === "PRINT:PRINTED"
+      );
+      if (p) return p.at;
+    }
+    if (step === "PACKED") {
+      const p = props.history.find((h) => h.status === "PACKED");
+      if (p) return p.at;
+    }
+    return undefined;
   }
 
   const currentIdx = TIMELINE_STATUSES.indexOf(props.current);
@@ -17,7 +36,7 @@ export function PhysicalOrderTimeline(props: {
     <ol className="space-y-4 border-l border-slate-200 pl-6">
       {TIMELINE_STATUSES.map((s, idx) => {
         const done = props.current === "CANCELLED" ? idx === 0 : idx <= currentIdx;
-        const at = historyByStatus.get(s) ?? historyByStatus.get(fulfillmentLabel(s));
+        const at = timeForStep(s);
         return (
           <li key={s} className="relative">
             <span className="absolute -left-[29px] top-0.5 rounded-full bg-white">
