@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
 import { decimalToNumber } from "@/lib/utils";
+import { printingQueueDashboardCountWhere } from "@/lib/physical/printing-queue";
 
 export async function GET() {
   const auth = await requireAdmin();
@@ -60,7 +61,7 @@ export async function GET() {
       _sum: { totalAmount: true },
     }),
     prisma.printingJob.count({
-      where: { status: { in: ["PENDING_PRINT", "PRINTING", "QC_PENDING"] } },
+      where: printingQueueDashboardCountWhere(),
     }),
   ]);
 

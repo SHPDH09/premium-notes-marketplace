@@ -8,6 +8,7 @@ import {
   appendStatusHistory,
 } from "@/lib/physical/orders";
 import { logAdminAudit } from "@/lib/physical/audit";
+import { removeFromPrintingQueue } from "@/lib/physical/printing-queue";
 import { PhysicalFulfillmentStatus, PhysicalPrintStatus, PhysicalShippingStatus } from "@prisma/client";
 import { z } from "zod";
 
@@ -204,6 +205,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           },
         });
         await appendStatusHistory(tx, params.id, "CANCELLED", body.reason, adminId);
+        await removeFromPrintingQueue(tx, params.id);
       });
     }
 

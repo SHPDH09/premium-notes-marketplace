@@ -15,6 +15,7 @@ import { createCashfreeOrder } from "@/lib/payment/cashfree";
 import { physicalCheckoutReturnUrl } from "@/lib/payment/return-url";
 import { roundMoney } from "@/lib/pricing";
 import { resolveAppBaseUrl } from "@/lib/app-url";
+import { removeFromPrintingQueue } from "@/lib/physical/printing-queue";
 
 export type DeliveryAddressInput = {
   fullName: string;
@@ -333,18 +334,21 @@ export async function refundPhysicalOrder(
     const { isOrderFullyRefundedByPolicy } = await import("@/lib/refund-policy");
     const fullyRefunded = isOrderFullyRefundedByPolicy(total, newRefundedTotal);
 
+    const cancelAfterFullRefund =
+      fullyRefunded && order.fulfillmentStatus !== "DELIVERED";
+
     await tx.physicalOrder.update({
       where: { id: orderId },
       data: {
         paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED",
         refundStatus: "REFUNDED",
-        fulfillmentStatus:
-          fullyRefunded && order.fulfillmentStatus !== "DELIVERED"
-            ? "CANCELLED"
-            : order.fulfillmentStatus,
+        fulfillmentStatus: cancelAfterFullRefund ? "CANCELLED" : order.fulfillmentStatus,
       },
     });
     await appendStatusHistory(tx, orderId, "REFUNDED", reason, adminId);
+    if (cancelAfterFullRefund) {
+      await removeFromPrintingQueue(tx, orderId);
+    }
   });
 
   emitPhysicalNotification("refund_processed", { orderId, orderNumber: order.orderNumber });

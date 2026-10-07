@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
+import { printingQueueJobWhere } from "@/lib/physical/printing-queue";
 
 export async function GET() {
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
 
   const jobs = await prisma.printingJob.findMany({
-    where: {
-      status: {
-        in: ["PENDING_PRINT", "PRINTING", "PRINTED", "QC_PENDING", "QC_FAILED", "REPRINT_REQUIRED"],
-      },
-    },
+    where: printingQueueJobWhere(),
     include: {
       order: {
         include: { items: true, printingJob: true },

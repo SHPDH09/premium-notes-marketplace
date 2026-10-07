@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { serializePhysicalOrder } from "@/lib/physical/serializers";
 import { STUDENT_CANCELLABLE } from "@/lib/physical/status-machine";
 import { appendStatusHistory } from "@/lib/physical/orders";
+import { removeFromPrintingQueue } from "@/lib/physical/printing-queue";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireStudent();
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     });
     await appendStatusHistory(tx, order.id, "CANCELLED", body.reason, auth.session!.user.id);
+    await removeFromPrintingQueue(tx, order.id);
   });
 
   return NextResponse.json({ ok: true });
