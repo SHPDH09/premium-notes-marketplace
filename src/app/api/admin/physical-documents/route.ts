@@ -41,15 +41,28 @@ export async function POST(req: NextRequest) {
   }
   const p = parsed.data;
 
+  let coverStorageKey = p.coverStorageKey ?? null;
+  let sourcePdfKey = p.sourcePdfKey ?? null;
+  let pageCount = p.pageCount ?? null;
+
+  if (p.sourceNoteId) {
+    const linked = await prisma.note.findUnique({ where: { id: p.sourceNoteId } });
+    if (linked) {
+      if (!coverStorageKey && linked.coverImage) coverStorageKey = linked.coverImage;
+      if (!sourcePdfKey && linked.pdfStorageKey) sourcePdfKey = linked.pdfStorageKey;
+      if (pageCount == null && linked.pdfPageCount) pageCount = linked.pdfPageCount;
+    }
+  }
+
   const doc = await prisma.physicalDocument.create({
     data: {
       sourceNoteId: p.sourceNoteId ?? null,
       name: p.name,
       title: p.title,
       description: p.description,
-      coverStorageKey: p.coverStorageKey ?? null,
-      sourcePdfKey: p.sourcePdfKey ?? null,
-      pageCount: p.pageCount ?? null,
+      coverStorageKey,
+      sourcePdfKey,
+      pageCount,
       paperSize: p.paperSize,
       paperType: p.paperType,
       printType: p.printType,

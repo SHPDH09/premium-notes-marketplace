@@ -1,108 +1,87 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { StudentShell } from "@/components/layout/student-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/utils";
-import { toast } from "sonner";
-import { readJsonResponse } from "@/lib/api/fetch-json";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { HorizontalScrollRow } from "@/components/ui/horizontal-marquee";
+import {
+  PhysicalDocumentCard,
+  PublicPhysicalDocument,
+} from "@/components/physical/physical-document-card";
 
 export default function PhysicalDocumentsPage() {
-  const [docs, setDocs] = useState<any[]>([]);
+  const [docs, setDocs] = useState<PublicPhysicalDocument[]>([]);
   const [qty, setQty] = useState<Record<string, number>>({});
-  const { status } = useSession();
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+
+  async function load() {
+    setLoading(true);
+    const params = new URLSearchParams({ sort });
+    if (q) params.set("q", q);
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice) params.set("maxPrice", maxPrice);
+    const res = await fetch(`/api/physical-documents?${params}`);
+    const data = await res.json();
+    setDocs(data.documents ?? []);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    void fetch("/api/physical-documents")
-      .then((r) => r.json())
-      .then((d) => setDocs(d.documents ?? []));
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function addToCart(id: string, buyNow = false) {
-    if (status !== "authenticated") {
-      router.push(`/login?callbackUrl=${encodeURIComponent("/physical-documents")}`);
-      return;
-    }
-    const quantity = qty[id] ?? 1;
-    const res = await fetch("/api/physical-cart", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ physicalDocumentId: id, quantity }),
-    });
-    const data = await readJsonResponse(res);
-    if (!res.ok) return toast.error(typeof data.error === "string" ? data.error : "Could not add");
-    toast.success("Added to cart");
-    if (buyNow) router.push("/physical-cart");
-  }
 
   return (
     <StudentShell>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Physical Documents</h1>
-          <p className="text-slate-600">Order printed copies delivered to your address.</p>
+          <h1 className="text-3xl font-bold text-slate-900">Physical Documents</h1>
+          <p className="mt-1 text-slate-600">
+            Same notes you browse digitally — order premium printed copies with delivery.
+          </p>
         </div>
-        {docs.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-slate-500">
-              No physical documents available.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {docs.map((doc) => (
-              <Card key={doc.id} className="overflow-hidden">
-                {doc.coverImage && (
-                  <div className="relative aspect-[4/3] bg-slate-100">
-                    <Image src={doc.coverImage} alt="" fill className="object-cover" />
-                  </div>
-                )}
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">{doc.title}</CardTitle>
-                  <p className="text-sm text-slate-500">{doc.name}</p>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <p className="line-clamp-3 text-slate-600">{doc.description}</p>
-                  <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                    {doc.pageCount && <span>{doc.pageCount} pages</span>}
-                    <span>{doc.paperType.replace("_", " ")}</span>
-                    <span>{doc.printType.replace("_", " & ")}</span>
-                  </div>
-                  <p className="text-lg font-semibold text-indigo-700">
-                    {formatCurrency(doc.finalPrice)} <span className="text-sm font-normal">/ copy</span>
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-500">Qty</label>
-                    <Input
-                      type="number"
-                      min={doc.minQuantity}
-                      max={doc.maxQuantity}
-                      className="h-9 w-20"
-                      value={qty[doc.id] ?? doc.minQuantity}
-                      onChange={(e) =>
-                        setQty((s) => ({ ...s, [doc.id]: parseInt(e.target.value, 10) || 1 }))
-                      }
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button className="flex-1" onClick={() => void addToCart(doc.id)}>
-                      Add to Cart
-                    </Button>
-                    <Button variant="outline" onClick={() => void addToCart(doc.id, true)}>
-                      Buy Now
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-5">
+          <Input placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input placeholder="Min price" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />
+          <Input placeholder="Max price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
+          <select
+            className="h-11 rounded-xl border border-slate-200 px-3 text-sm"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+          >
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="popular">Popular</option>
+          </select>
+          <Button onClick={() => void load()}>Apply Filters</Button>
+        </div>
+
+        <HorizontalScrollRow className="px-1">
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-96 min-w-[280px] shrink-0 snap-start" />
+              ))
+            : docs.map((doc) => (
+                <div key={doc.id} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
+                  <PhysicalDocumentCard
+                    doc={doc}
+                    quantity={qty[doc.id] ?? doc.minQuantity}
+                    onQuantityChange={(n) => setQty((s) => ({ ...s, [doc.id]: n }))}
+                  />
+                </div>
+              ))}
+        </HorizontalScrollRow>
+
+        {!loading && docs.length === 0 && (
+          <p className="py-10 text-center text-slate-500">No physical documents available.</p>
         )}
       </div>
     </StudentShell>

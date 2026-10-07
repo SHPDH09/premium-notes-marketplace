@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NotePicker } from "@/components/admin/note-picker";
 import { toast } from "sonner";
 
 export default function CreatePhysicalDocumentPage() {
   const router = useRouter();
+  const [notes, setNotes] = useState<{ id: string; title: string }[]>([]);
+  const [sourceNoteId, setSourceNoteId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     title: "",
@@ -23,12 +26,39 @@ export default function CreatePhysicalDocumentPage() {
     sourcePdfKey: "",
   });
 
+  useEffect(() => {
+    void fetch("/api/admin/notes")
+      .then((r) => r.json())
+      .then((d) => setNotes((d.notes ?? []).map((n: { id: string; title: string }) => ({ id: n.id, title: n.title }))));
+  }, []);
+
+  function applyNote(noteId: string) {
+    setSourceNoteId(noteId);
+    const note = notes.find((n) => n.id === noteId);
+    void fetch("/api/admin/notes")
+      .then((r) => r.json())
+      .then((d) => {
+        const full = (d.notes ?? []).find((n: { id: string }) => n.id === noteId);
+        if (!full) return;
+        setForm((f) => ({
+          ...f,
+          name: full.name ?? full.title ?? note?.title ?? "",
+          title: full.title ?? "",
+          description: full.description ?? "",
+          pageCount: full.pdfPageCount ?? f.pageCount,
+        }));
+      });
+  }
+
   async function submit() {
     const res = await fetch("/api/admin/physical-documents", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
+        sourceNoteId,
+        coverStorageKey: form.coverStorageKey || null,
+        sourcePdfKey: form.sourcePdfKey || null,
         description: form.description || "Physical document",
         minQuantity: 1,
         maxQuantity: 10,
@@ -44,12 +74,25 @@ export default function CreatePhysicalDocumentPage() {
   return (
     <div className="mx-auto max-w-xl space-y-4">
       <h1 className="text-2xl font-bold">Add physical document</h1>
+      <div>
+        <Label>Link to existing note (same title, cover, description as Browse Notes)</Label>
+        <div className="mt-2">
+          <NotePicker
+            notes={notes}
+            value={sourceNoteId ? [sourceNoteId] : []}
+            onChange={(ids) => {
+              const id = ids[0];
+              if (id) applyNote(id);
+              else setSourceNoteId(null);
+            }}
+            placeholder="Pick a note…"
+          />
+        </div>
+      </div>
       {(
         [
           ["name", "Document name"],
           ["title", "Title"],
-          ["coverStorageKey", "Cover storage key"],
-          ["sourcePdfKey", "Source PDF key"],
         ] as const
       ).map(([key, label]) => (
         <div key={key}>
@@ -86,7 +129,7 @@ export default function CreatePhysicalDocumentPage() {
         </div>
       ))}
       <p className="text-xs text-slate-500">
-        Upload cover/PDF via existing admin upload flow, then paste storage keys here.
+        Cover and PDF are copied from the linked note automatically on save when keys are left empty.
       </p>
       <Button onClick={() => void submit()}>Create</Button>
     </div>

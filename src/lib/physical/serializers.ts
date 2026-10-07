@@ -1,4 +1,5 @@
 import {
+  Note,
   PhysicalDocument,
   PhysicalOrder,
   PhysicalOrderItem,
@@ -11,15 +12,31 @@ import {
 import { decimalToNumber } from "@/lib/utils";
 import { getPublicCoverUrl } from "@/lib/storage";
 import { fulfillmentLabel, printStatusLabel, shippingStatusLabel } from "@/lib/physical/status-machine";
+import { serializeNotePublic } from "@/lib/serializers";
 
-export function serializePhysicalDocumentPublic(doc: PhysicalDocument) {
+export function serializePhysicalDocumentPublic(
+  doc: PhysicalDocument,
+  sourceNote?: Note | null
+) {
+  const noteCover = sourceNote ? getPublicCoverUrl(sourceNote.coverImage) : null;
+  const docCover = getPublicCoverUrl(doc.coverStorageKey);
+  const coverImage = docCover ?? noteCover;
+
+  const title = doc.title || sourceNote?.title || doc.name;
+  const name = doc.name || sourceNote?.name || title;
+  const description = doc.description || sourceNote?.description || "";
+
+  const pageCount = doc.pageCount ?? sourceNote?.pdfPageCount ?? null;
+
+  const digitalNote = sourceNote ? serializeNotePublic(sourceNote) : null;
+
   return {
     id: doc.id,
-    name: doc.name,
-    title: doc.title,
-    description: doc.description,
-    coverImage: getPublicCoverUrl(doc.coverStorageKey),
-    pageCount: doc.pageCount,
+    name,
+    title,
+    description,
+    coverImage,
+    pageCount,
     paperSize: doc.paperSize,
     paperType: doc.paperType,
     printType: doc.printType,
@@ -30,6 +47,12 @@ export function serializePhysicalDocumentPublic(doc: PhysicalDocument) {
     processingDays: doc.processingDays,
     status: doc.status,
     sourceNoteId: doc.sourceNoteId,
+    purchaseCount: sourceNote?.purchaseCount ?? 0,
+    /** Linked digital note card fields (same shape as browse notes). */
+    linkedNote: digitalNote,
+    noteDiscountPercentage: digitalNote?.discountPercentage ?? 0,
+    compareDigitalPrice: digitalNote?.finalPrice ?? null,
+    createdAt: doc.createdAt.toISOString(),
   };
 }
 

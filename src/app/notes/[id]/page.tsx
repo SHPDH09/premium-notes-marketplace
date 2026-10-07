@@ -17,6 +17,9 @@ import { refundPolicyPaymentBullet } from "@/lib/refund-policy";
 export default function NoteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [note, setNote] = useState<any>(null);
+  const [physicalDocument, setPhysicalDocument] = useState<{ id: string; finalPrice: number } | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
   const router = useRouter();
@@ -24,7 +27,10 @@ export default function NoteDetailPage() {
   useEffect(() => {
     fetch(`/api/notes/${id}`)
       .then((r) => r.json())
-      .then((d) => setNote(d.note))
+      .then((d) => {
+        setNote(d.note);
+        setPhysicalDocument(d.physicalDocument ?? null);
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -92,6 +98,17 @@ export default function NoteDetailPage() {
               <span className="text-lg text-slate-400 line-through">{formatCurrency(note.price)}</span>
             )}
           </div>
+          {physicalDocument && (
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+              <p className="font-semibold text-indigo-900">Available as physical copy</p>
+              <p className="mt-1 text-sm text-indigo-800">
+                Printed &amp; delivered from {formatCurrency(physicalDocument.finalPrice)} per copy
+              </p>
+              <Button className="mt-3" variant="secondary" size="sm" asChild>
+                <Link href={`/physical-documents/${physicalDocument.id}`}>Order printed copy</Link>
+              </Button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             {note.owned ? (
               <>
