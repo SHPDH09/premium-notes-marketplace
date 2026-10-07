@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { readJsonResponse } from "@/lib/api/fetch-json";
 
 function SuccessContent() {
   const params = useSearchParams();
-  const router = useRouter();
   const orderId = params.get("order_id");
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [status, setStatus] = useState("verifying");
@@ -41,9 +40,8 @@ function SuccessContent() {
           : "If you completed payment, confirmation may take a moment."}
       </p>
       <div className="mt-8 flex flex-col gap-2">
-        <Button onClick={() => router.push(`/physical-orders/${orderId}`)}>View order</Button>
-        <Button variant="outline" asChild>
-          <Link href="/physical-orders">All physical orders</Link>
+        <Button asChild>
+          <Link href="/physical-orders">View order</Link>
         </Button>
       </div>
     </div>
