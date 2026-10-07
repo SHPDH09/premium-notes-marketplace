@@ -1,4 +1,4 @@
-import { Coupon, CouponNote, CouponPhysicalDocument, DiscountType, CouponAppliesTo } from "@prisma/client";
+import { Coupon, CouponNote, CouponPhysicalDocument, DiscountType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { calculateCouponDiscount, roundMoney } from "@/lib/pricing";
 
@@ -6,10 +6,6 @@ type CouponWithRelations = Coupon & {
   couponNotes: CouponNote[];
   couponPhysicalDocuments: CouponPhysicalDocument[];
 };
-
-function appliesToPhysical(appliesTo: CouponAppliesTo): boolean {
-  return appliesTo === "PHYSICAL" || appliesTo === "BOTH";
-}
 
 export async function validateCouponForPhysicalCart(params: {
   code: string;
@@ -26,9 +22,6 @@ export async function validateCouponForPhysicalCart(params: {
   });
 
   if (!coupon) return { ok: false, message: "Invalid coupon code." };
-  if (!appliesToPhysical(coupon.appliesTo)) {
-    return { ok: false, message: "This coupon does not apply to physical documents." };
-  }
   if (coupon.status !== "ACTIVE") return { ok: false, message: "This coupon is not active." };
 
   const now = new Date();
@@ -52,6 +45,22 @@ export async function validateCouponForPhysicalCart(params: {
     const allAllowed = params.documentIds.every((id) => allowed.has(id));
     if (!allAllowed) {
       return { ok: false, message: "Coupon does not apply to all items in your cart." };
+    }
+  } else if (coupon.couponNotes.length > 0) {
+    const docs = await prisma.physicalDocument.findMany({
+      where: { id: { in: params.documentIds } },
+      select: { id: true, sourceNoteId: true },
+    });
+    const allowedNotes = new Set(coupon.couponNotes.map((n) => n.noteId));
+    const allAllowed = docs.every(
+      (d) => d.sourceNoteId != null && allowedNotes.has(d.sourceNoteId)
+    );
+    if (!allAllowed || docs.length !== params.documentIds.length) {
+      return {
+        ok: false,
+        message:
+          "Coupon does not apply to all items in your cart. Link physical products to notes or pick applicable physical documents in admin.",
+      };
     }
   }
 
