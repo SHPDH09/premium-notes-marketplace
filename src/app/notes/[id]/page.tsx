@@ -13,6 +13,7 @@ import { useSession } from "next-auth/react";
 import { BrandLoading } from "@/components/brand/brand-loading";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { refundPolicyPaymentBullet } from "@/lib/refund-policy";
+import { NotePreviewPanel } from "@/components/notes/note-preview-panel";
 
 export default function NoteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -110,7 +111,7 @@ export default function NoteDetailPage() {
             {note.owned ? (
               <>
                 <Badge variant="success">Already Purchased</Badge>
-                <Button onClick={openNotes}>Open Notes</Button>
+                <Button onClick={openNotes}>Open protected viewer</Button>
                 <Button variant="secondary" asChild>
                   <Link href="/purchases">My Purchased Notes</Link>
                 </Button>
@@ -127,8 +128,25 @@ export default function NoteDetailPage() {
               </>
             )}
           </div>
+
+          {(note.previewAvailable || note.hasPdf) && (
+            <div className="lg:hidden">
+              <h2 className="mb-3 text-lg font-semibold text-slate-900">Free preview</h2>
+              <NotePreviewPanel noteId={id} compact />
+            </div>
+          )}
         </div>
       </div>
+
+      {(note.previewAvailable || note.hasPdf) && (
+        <section className="mx-auto max-w-6xl px-4 pb-12">
+          <h2 className="mb-4 hidden text-xl font-bold text-slate-900 lg:block">Notes preview</h2>
+          <div className="hidden lg:block">
+            <NotePreviewPanel noteId={id} />
+          </div>
+        </section>
+      )}
+
       <SiteFooter />
     </div>
   );

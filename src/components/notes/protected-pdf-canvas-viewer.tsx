@@ -161,7 +161,7 @@ export function ProtectedPdfCanvasViewer(props: {
     };
   }, []);
 
-  const minHeight = props.compact ? "min-h-[12rem]" : "min-h-[50vh] sm:min-h-[70vh]";
+  const minHeight = props.compact ? "min-h-[14rem]" : "min-h-[420px] sm:min-h-[520px] lg:min-h-[560px]";
 
   return (
     <div
