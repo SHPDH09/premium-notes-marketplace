@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export function BrandLogo({ className }: { className?: string }) {
   return (
     <Link href="/" className={cn("flex items-center", className)}>
-      <span className="relative block overflow-hidden rounded-xl border border-cyan-500/20 bg-black px-2 py-1 shadow-md shadow-cyan-500/10">
+      <span className="relative block overflow-hidden rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-md shadow-slate-200/80">
         <Image
           src={brand.logoSrc}
           alt={brand.name}

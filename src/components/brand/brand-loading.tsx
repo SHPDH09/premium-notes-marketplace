@@ -33,7 +33,7 @@ export function BrandLoading(props: {
       <div className="brand-loading-scene" style={{ perspective: "900px" }}>
         <div
           className={cn(
-            "brand-loading-card relative overflow-hidden rounded-2xl border-2 border-cyan-400/35 bg-black/95 p-2 shadow-[0_20px_50px_-12px_rgba(0,229,255,0.35)]",
+            "brand-loading-card relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-white p-2 shadow-[0_20px_50px_-12px_rgba(15,23,42,0.12)]",
             dims.box
           )}
         >
