@@ -8,7 +8,6 @@ export function pdfStreamResponse(body: Buffer, filename = "notes.pdf") {
       "Content-Disposition": `inline; filename="${filename.replace(/"/g, "")}"`,
       "Cache-Control": "private, no-store, no-cache, must-revalidate",
       "X-Content-Type-Options": "nosniff",
-      "X-Frame-Options": "SAMEORIGIN",
     },
   });
 }

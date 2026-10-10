@@ -6,6 +6,7 @@ import { Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BrandLoading } from "@/components/brand/brand-loading";
+import { ProtectedPdfEmbed } from "@/components/notes/protected-pdf-embed";
 import { formatCurrency } from "@/lib/utils";
 
 type PreviewData = {
@@ -89,12 +90,10 @@ export function NotePreviewPanel({
         onContextMenu={(e) => e.preventDefault()}
       >
         {data?.url && (
-          <iframe
+          <ProtectedPdfEmbed
+            streamUrl={data.url}
             title="Notes preview"
-            src={`${data.url}#toolbar=0&navpanes=0&scrollbar=1`}
-            className={compact ? "h-52 w-full bg-white" : "h-80 w-full bg-white"}
-            sandbox="allow-same-origin allow-scripts"
-            referrerPolicy="no-referrer"
+            heightClass={compact ? "h-52" : "h-80"}
           />
         )}
 

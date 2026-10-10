@@ -48,28 +48,21 @@ export default async function PurchasedNoteViewPage({
           </Button>
         </div>
 
-        {note.notesLink ? (
-          <div
-            className="relative overflow-hidden rounded-xl border border-slate-200 bg-white"
-            style={{ userSelect: "none" }}
-          >
-            <iframe
-              title={note.title}
-              src={note.notesLink}
-              className="h-[min(80vh,720px)] w-full"
-              sandbox="allow-scripts allow-same-origin allow-forms"
-              referrerPolicy="no-referrer"
-            />
-            <p className="border-t px-3 py-2 text-center text-xs text-slate-500">
-              External notes open inside your account only. Do not share this login.
-            </p>
-          </div>
-        ) : note.pdfStorageKey ? (
+        {note.pdfStorageKey ? (
           <SecureNoteViewer
             streamUrl={`/api/purchases/${params.noteId}/stream`}
             watermark={watermark}
             title={note.title}
           />
+        ) : note.notesLink ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-950">
+            <p className="font-semibold">PDF viewer not available for this note</p>
+            <p className="mt-2 text-amber-900/90">
+              This listing uses an external link that cannot be shown inside the dashboard (the other
+              site blocks embedding). For protected in-app viewing, the admin should attach a PDF file
+              to this note in the admin panel.
+            </p>
+          </div>
         ) : (
           <p className="text-slate-500">No content available for this note.</p>
         )}

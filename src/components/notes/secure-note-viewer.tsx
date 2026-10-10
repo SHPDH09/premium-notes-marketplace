@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { cn } from "@/lib/utils";
 
 export function SecureNoteViewer(props: {
@@ -9,6 +11,39 @@ export function SecureNoteViewer(props: {
   title?: string;
 }) {
   const label = props.watermark || "Licensed copy";
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const res = await fetch(props.streamUrl, { credentials: "include", cache: "no-store" });
+        const contentType = res.headers.get("content-type") ?? "";
+        if (!res.ok || !contentType.includes("pdf")) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? "Could not load PDF. Try signing in again.");
+        }
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+        setError(null);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Could not load PDF");
+          setBlobUrl(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [props.streamUrl]);
 
   return (
     <div
@@ -33,14 +68,24 @@ export function SecureNoteViewer(props: {
           ))}
         </div>
       </div>
-      <iframe
-        title={props.title ?? "Protected notes viewer"}
-        src={`${props.streamUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-        className="relative z-0 h-[min(80vh,720px)] w-full bg-white"
-        sandbox="allow-same-origin allow-scripts"
-        referrerPolicy="no-referrer"
-      />
-      <p className="border-t border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-500">
+
+      <div className="relative z-0 min-h-[min(80vh,720px)] bg-white">
+        {error ? (
+          <p className="flex h-[min(50vh,400px)] items-center justify-center px-4 text-center text-sm text-red-600">
+            {error}
+          </p>
+        ) : !blobUrl ? (
+          <BrandLoading fullPage message="Loading PDF…" size="md" />
+        ) : (
+          <embed
+            title={props.title ?? "Protected notes viewer"}
+            src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+            type="application/pdf"
+            className="h-[min(80vh,720px)] w-full"
+          />
+        )}
+      </div>
+      <p className="relative z-20 border-t border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-500">
         View-only in your account. Sharing, downloading, and copying are not permitted.
       </p>
     </div>
