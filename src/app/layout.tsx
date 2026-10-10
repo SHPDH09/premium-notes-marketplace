@@ -13,6 +13,9 @@ const geistSans = localFont({
 export const metadata: Metadata = {
   title: `${brand.name} | Premium Notes Marketplace`,
   description: brand.tagline,
+  verification: {
+    google: "1PRAqy7h75iWJxlRQTuntewyJTLVsKVSkOj0v-aVUa8",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

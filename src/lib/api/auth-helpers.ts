@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-options";
+import { isSessionVersionValid } from "@/lib/session-control";
 
 export async function requireSession() {
   let session;
@@ -19,6 +20,24 @@ export async function requireSession() {
   if (session.user.status === "DISABLED") {
     return { session: null, error: NextResponse.json({ error: "Account disabled" }, { status: 403 }) };
   }
+
+  const sessionOk = await isSessionVersionValid(
+    session.user.id,
+    session.user.sessionVersion
+  );
+  if (!sessionOk) {
+    return {
+      session: null,
+      error: NextResponse.json(
+        {
+          error: "Your account was signed in on another device. Please sign in again.",
+          code: "SESSION_SUPERSEDED",
+        },
+        { status: 401 }
+      ),
+    };
+  }
+
   return { session, error: null };
 }
 

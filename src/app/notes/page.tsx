@@ -5,7 +5,7 @@ import { PublicNavbar } from "@/components/layout/public-navbar";
 import { NoteCard, PublicNote } from "@/components/notes/note-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { HorizontalScrollRow } from "@/components/ui/horizontal-marquee";
 
@@ -56,15 +56,17 @@ export default function NotesPage() {
           <Button onClick={load}>Apply Filters</Button>
         </div>
         <HorizontalScrollRow className="mt-8 px-1">
-          {loading
-            ? Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-80 min-w-[280px] shrink-0 snap-start" />
-              ))
-            : notes.map((note) => (
-                <div key={note.id} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
-                  <NoteCard note={note} />
-                </div>
-              ))}
+          {loading ? (
+            <div className="min-w-full py-8">
+              <BrandLoading fullPage size="lg" message="Loading notes…" />
+            </div>
+          ) : (
+            notes.map((note) => (
+              <div key={note.id} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
+                <NoteCard note={note} />
+              </div>
+            ))
+          )}
         </HorizontalScrollRow>
         {!loading && notes.length === 0 && (
           <p className="mt-10 text-center text-slate-500">No notes found.</p>

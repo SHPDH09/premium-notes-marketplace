@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,7 +24,7 @@ export default function AdminUserDetailPage() {
     load();
   }, [id]);
 
-  if (!data?.user) return <p>Loading...</p>;
+  if (!data?.user) return <BrandLoading fullPage message="Loading user…" />;
 
   async function updateUser(e: React.FormEvent) {
     e.preventDefault();

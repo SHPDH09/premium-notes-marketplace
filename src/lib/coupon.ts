@@ -19,6 +19,9 @@ export async function validateCouponForCart(params: {
   });
 
   if (!coupon) return { ok: false, message: "Invalid coupon code." };
+  if (coupon.appliesTo === "PHYSICAL") {
+    return { ok: false, message: "This coupon applies to physical document orders only." };
+  }
   if (coupon.status !== "ACTIVE") return { ok: false, message: "This coupon is not active." };
 
   const now = new Date();

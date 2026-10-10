@@ -19,5 +19,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     owned = !!purchase;
   }
 
-  return NextResponse.json({ note: serializeNotePublic(note, owned) });
+  const physicalDocument = await prisma.physicalDocument.findFirst({
+    where: { sourceNoteId: note.id, status: "ACTIVE" },
+    select: { id: true, finalPrice: true },
+  });
+
+  return NextResponse.json({
+    note: serializeNotePublic(note, owned),
+    physicalDocument: physicalDocument
+      ? { id: physicalDocument.id, finalPrice: Number(physicalDocument.finalPrice) }
+      : null,
+  });
 }

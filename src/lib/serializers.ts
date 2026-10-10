@@ -82,7 +82,12 @@ export function serializeTransaction(
   };
 }
 
-export function serializeCoupon(coupon: Coupon & { couponNotes?: { noteId: string }[] }) {
+export function serializeCoupon(
+  coupon: Coupon & {
+    couponNotes?: { noteId: string }[];
+    couponPhysicalDocuments?: { physicalDocumentId: string }[];
+  }
+) {
   return {
     id: coupon.id,
     code: coupon.code,
@@ -95,7 +100,10 @@ export function serializeCoupon(coupon: Coupon & { couponNotes?: { noteId: strin
     minPurchaseAmount: decimalToNumber(coupon.minPurchaseAmount),
     maxDiscount: coupon.maxDiscount ? decimalToNumber(coupon.maxDiscount) : null,
     status: coupon.status,
+    appliesTo: coupon.appliesTo,
     noteIds: coupon.couponNotes?.map((n) => n.noteId) ?? [],
+    physicalDocumentIds:
+      coupon.couponPhysicalDocuments?.map((n) => n.physicalDocumentId) ?? [],
   };
 }
 

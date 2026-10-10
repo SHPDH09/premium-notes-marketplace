@@ -16,6 +16,62 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  .brand-loading-scene {
+    transform-style: preserve-3d;
+  }
+
+  .brand-loading-card {
+    transform-style: preserve-3d;
+    animation: brand-tilt 3.2s ease-in-out infinite;
+    backface-visibility: hidden;
+  }
+
+  .protected-pdf-viewer {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .protected-pdf-viewer canvas {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .brand-loading-shine {
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      rgba(0, 229, 255, 0.45) 50%,
+      transparent 65%
+    );
+    animation: brand-shine 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes brand-tilt {
+  0%,
+  100% {
+    transform: rotateY(-14deg) rotateX(6deg) translateY(0);
+  }
+  50% {
+    transform: rotateY(14deg) rotateX(-4deg) translateY(-6px);
+  }
+}
+
+@keyframes brand-shine {
+  0% {
+    transform: translateX(-130%) skewX(-16deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(230%) skewX(-16deg);
+    opacity: 0;
+  }
 }
 
 @media print {
