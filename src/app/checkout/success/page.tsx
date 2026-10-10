@@ -14,6 +14,7 @@ function SuccessContent() {
   const orderIdParam = params.get("order_id");
   const orderId = appOrderId ?? orderIdParam;
   const [status, setStatus] = useState("Verifying payment...");
+  const [resolvedOrderId, setResolvedOrderId] = useState<string | null>(appOrderId);
 
   useEffect(() => {
     if (!orderId) return;
@@ -28,6 +29,7 @@ function SuccessContent() {
     })
       .then((r) => r.json())
       .then((d) => {
+        if (typeof d.orderId === "string") setResolvedOrderId(d.orderId);
         if (d.status === "SUCCESS") {
           setStatus("SUCCESS");
           toast.success("Note purchased successfully.");
@@ -42,7 +44,14 @@ function SuccessContent() {
       <h1 className="text-3xl font-bold text-slate-900">Purchase Confirmation</h1>
       <p className="mt-3 text-slate-600">Payment status: {status}</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Button asChild>
+        {status === "SUCCESS" && resolvedOrderId ? (
+          <Button asChild>
+            <Link href={`/orders/${resolvedOrderId}/invoice`} target="_blank">
+              Download official bill
+            </Link>
+          </Button>
+        ) : null}
+        <Button asChild variant={status === "SUCCESS" && resolvedOrderId ? "secondary" : "default"}>
           <Link href="/purchases">View Purchased Notes</Link>
         </Button>
         <Button variant="secondary" asChild>

@@ -17,6 +17,7 @@ export default withAuth(
       path.startsWith("/cart") ||
       path.startsWith("/purchases") ||
       path.startsWith("/transactions") ||
+      path.startsWith("/orders") ||
       path.startsWith("/physical-documents") ||
       path.startsWith("/physical-cart") ||
       path.startsWith("/physical-checkout") ||
@@ -50,6 +51,7 @@ export default withAuth(
           path.startsWith("/cart") ||
           path.startsWith("/purchases") ||
           path.startsWith("/transactions") ||
+      path.startsWith("/orders") ||
           path.startsWith("/physical-documents") ||
           path.startsWith("/physical-cart") ||
           path.startsWith("/physical-orders") ||
@@ -71,6 +73,7 @@ export const config = {
     "/cart",
     "/purchases/:path*",
     "/transactions",
+    "/orders/:path*",
     "/profile",
     "/physical-documents/:path*",
     "/physical-cart",

@@ -42,6 +42,7 @@ export default function TransactionsPage() {
                 <th className="px-4 py-3">Final</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Bill</th>
               </tr>
             </thead>
             <tbody>
@@ -71,6 +72,15 @@ export default function TransactionsPage() {
                       : t.paymentStatus}
                   </td>
                   <td className="px-4 py-3">{new Date(t.createdAt).toLocaleString()}</td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/orders/${t.orderId}/invoice`}
+                      target="_blank"
+                      className="font-medium text-indigo-600 hover:underline"
+                    >
+                      Invoice
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

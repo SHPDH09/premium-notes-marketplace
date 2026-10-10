@@ -62,7 +62,9 @@ export default function PhysicalOrderDetailPage() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href={`/physical-orders/${id}/invoice`}>Download invoice</Link>
+              <Link href={`/physical-orders/${id}/invoice`} target="_blank">
+                Official bill / invoice
+              </Link>
             </Button>
             {order.trackingUrl && (
               <Button asChild>

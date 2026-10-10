@@ -78,7 +78,14 @@ function SuccessContent() {
             : "If you completed payment, confirmation may take a moment. Refresh this page or open your order below."}
       </p>
       <div className="mt-8 flex flex-col gap-2">
-        <Button asChild>
+        {status === "success" && resolvedOrderId ? (
+          <Button asChild>
+            <Link href={`/physical-orders/${resolvedOrderId}/invoice`} target="_blank">
+              Download official bill
+            </Link>
+          </Button>
+        ) : null}
+        <Button asChild variant={status === "success" && resolvedOrderId ? "secondary" : "default"}>
           <Link href={viewOrderHref}>View order</Link>
         </Button>
         <Button variant="outline" asChild>
