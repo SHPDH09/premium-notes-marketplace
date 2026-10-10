@@ -6,7 +6,7 @@ import { Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BrandLoading } from "@/components/brand/brand-loading";
-import { ProtectedPdfEmbed } from "@/components/notes/protected-pdf-embed";
+import { ProtectedPdfCanvasViewer } from "@/components/notes/protected-pdf-canvas-viewer";
 import { formatCurrency } from "@/lib/utils";
 
 type PreviewData = {
@@ -90,10 +90,11 @@ export function NotePreviewPanel({
         onContextMenu={(e) => e.preventDefault()}
       >
         {data?.url && (
-          <ProtectedPdfEmbed
+          <ProtectedPdfCanvasViewer
             streamUrl={data.url}
             title="Notes preview"
-            heightClass={compact ? "h-52" : "h-80"}
+            compact={compact}
+            watermark="TechLaunchpad — preview only"
           />
         )}
 

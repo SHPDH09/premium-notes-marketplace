@@ -27,6 +27,18 @@ body {
     backface-visibility: hidden;
   }
 
+  .protected-pdf-viewer {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .protected-pdf-viewer canvas {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
   .brand-loading-shine {
     background: linear-gradient(
       105deg,
