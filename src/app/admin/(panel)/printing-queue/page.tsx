@@ -4,20 +4,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function PrintingQueuePage() {
   const [queue, setQueue] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void fetch("/api/admin/printing-queue")
       .then((r) => r.json())
-      .then((d) => setQueue(d.queue ?? []));
+      .then((d) => setQueue(d.queue ?? []))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Printing Queue</h1>
-      {queue.length === 0 ? (
+      {loading ? (
+        <BrandLoading fullPage message="Loading queue…" />
+      ) : queue.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-slate-500">
             Your printing queue is empty.

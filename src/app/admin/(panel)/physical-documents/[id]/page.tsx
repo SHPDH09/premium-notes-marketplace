@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhysicalPagePricingFields } from "@/components/admin/physical-page-pricing";
 import { toast } from "sonner";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function EditPhysicalDocumentPage() {
   const params = useParams();
@@ -58,7 +59,7 @@ export default function EditPhysicalDocumentPage() {
     else toast.error(data.error ?? "Unavailable");
   }
 
-  if (!form) return <p>Loading…</p>;
+  if (!form) return <BrandLoading fullPage message="Loading document…" />;
 
   const noteTotalPages =
     form.sourceNotePageCount ?? form.linkedNote?.pdfPageCount ?? null;

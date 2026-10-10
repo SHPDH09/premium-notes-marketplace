@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 const empty = {
   fullName: "",
@@ -23,12 +24,15 @@ const empty = {
 
 export default function AddressesPage() {
   const [addresses, setAddresses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(empty);
 
   async function load() {
+    setLoading(true);
     const res = await fetch("/api/addresses", { credentials: "include" });
     const data = await res.json();
     setAddresses(data.addresses ?? []);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -59,6 +63,10 @@ export default function AddressesPage() {
     <StudentShell>
       <div className="mx-auto max-w-2xl space-y-6">
         <h1 className="text-2xl font-bold">My Addresses</h1>
+        {loading ? (
+          <BrandLoading fullPage message="Loading addresses…" />
+        ) : (
+          <>
         {addresses.map((a) => (
           <Card key={a.id}>
             <CardContent className="flex justify-between p-4 text-sm">
@@ -112,6 +120,8 @@ export default function AddressesPage() {
             </Button>
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
     </StudentShell>
   );

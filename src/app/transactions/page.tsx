@@ -6,14 +6,17 @@ import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { refundPolicyShortText } from "@/lib/refund-policy";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function TransactionsPage() {
   const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/student/transactions")
       .then((r) => r.json())
-      .then((d) => setItems(d.transactions ?? []));
+      .then((d) => setItems(d.transactions ?? []))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -25,6 +28,9 @@ export default function TransactionsPage() {
           Read full policy
         </Link>
       </p>
+      {loading ? (
+        <BrandLoading fullPage message="Loading transactions…" />
+      ) : (
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="min-w-full text-sm">
@@ -72,6 +78,7 @@ export default function TransactionsPage() {
           {!items.length && <p className="p-8 text-center text-slate-500">No transactions yet.</p>}
         </CardContent>
       </Card>
+      )}
     </StudentShell>
   );
 }

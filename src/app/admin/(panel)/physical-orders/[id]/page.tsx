@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { PhysicalFulfillmentStatus } from "@prisma/client";
 import { PhysicalOrderJourney } from "@/components/physical/order-journey";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 const actions: { label: string; status: PhysicalFulfillmentStatus }[] = [
   { label: "Start processing", status: "PROCESSING" },
@@ -82,7 +83,7 @@ export default function AdminPhysicalOrderDetailPage() {
     }
   }
 
-  if (!order) return <p>Loading…</p>;
+  if (!order) return <BrandLoading fullPage message="Loading order…" />;
 
   return (
     <div className="space-y-6">

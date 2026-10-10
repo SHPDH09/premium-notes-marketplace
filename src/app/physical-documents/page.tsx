@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { StudentShell } from "@/components/layout/student-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { HorizontalScrollRow } from "@/components/ui/horizontal-marquee";
 import {
   PhysicalDocumentCard,
@@ -65,19 +65,21 @@ export default function PhysicalDocumentsPage() {
         </div>
 
         <HorizontalScrollRow className="px-1">
-          {loading
-            ? Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-96 min-w-[280px] shrink-0 snap-start" />
-              ))
-            : docs.map((doc) => (
-                <div key={doc.id} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
-                  <PhysicalDocumentCard
-                    doc={doc}
-                    quantity={qty[doc.id] ?? doc.minQuantity}
-                    onQuantityChange={(n) => setQty((s) => ({ ...s, [doc.id]: n }))}
-                  />
-                </div>
-              ))}
+          {loading ? (
+            <div className="min-w-full py-8">
+              <BrandLoading fullPage size="lg" message="Loading documents…" />
+            </div>
+          ) : (
+            docs.map((doc) => (
+              <div key={doc.id} className="min-w-[280px] max-w-[320px] shrink-0 snap-start">
+                <PhysicalDocumentCard
+                  doc={doc}
+                  quantity={qty[doc.id] ?? doc.minQuantity}
+                  onQuantityChange={(n) => setQty((s) => ({ ...s, [doc.id]: n }))}
+                />
+              </div>
+            ))
+          )}
         </HorizontalScrollRow>
 
         {!loading && docs.length === 0 && (

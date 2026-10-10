@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { brand } from "@/config/brand";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { LegalAcceptance } from "@/components/legal/legal-acceptance";
@@ -20,13 +20,16 @@ export default function NotePaymentPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [note, setNote] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     fetch(`/api/notes/${id}`)
       .then((r) => r.json())
-      .then((d) => setNote(d.note));
+      .then((d) => setNote(d.note))
+      .finally(() => setLoading(false));
   }, [id]);
 
   async function payAndUnlock() {
@@ -81,11 +84,20 @@ export default function NotePaymentPage() {
     router.push(`/checkout/pay?session=${encodeURIComponent(data.paymentSessionId)}&order=${data.orderId}`);
   }
 
+  if (loading) {
+    return (
+      <div>
+        <PublicNavbar />
+        <BrandLoading fullPage size="lg" message="Loading checkout…" />
+      </div>
+    );
+  }
+
   if (!note) {
     return (
       <div>
         <PublicNavbar />
-        <Skeleton className="mx-auto mt-10 h-96 max-w-3xl" />
+        <p className="py-20 text-center text-slate-500">Note not found.</p>
       </div>
     );
   }

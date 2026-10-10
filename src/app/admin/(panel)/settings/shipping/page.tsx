@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function ShippingSettingsPage() {
   const [form, setForm] = useState<any>(null);
@@ -26,7 +27,7 @@ export default function ShippingSettingsPage() {
     toast.success("Saved");
   }
 
-  if (!form) return <p>Loading…</p>;
+  if (!form) return <BrandLoading fullPage message="Loading settings…" />;
 
   return (
     <Card className="max-w-lg">

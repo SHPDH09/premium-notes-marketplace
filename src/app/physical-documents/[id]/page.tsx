@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { readJsonResponse } from "@/lib/api/fetch-json";
 
 function labelEnum(v: string) {
@@ -56,7 +56,7 @@ export default function PhysicalDocumentDetailPage() {
   if (loading) {
     return (
       <StudentShell>
-        <Skeleton className="mx-auto mt-4 h-96 max-w-5xl" />
+        <BrandLoading fullPage size="lg" message="Loading document…" />
       </StudentShell>
     );
   }

@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { refundPolicyPaymentBullet } from "@/lib/refund-policy";
 
@@ -61,7 +61,7 @@ export default function NoteDetailPage() {
     return (
       <div>
         <PublicNavbar />
-        <Skeleton className="mx-auto mt-10 h-96 max-w-5xl" />
+        <BrandLoading fullPage size="lg" message="Loading note…" />
       </div>
     );
   }

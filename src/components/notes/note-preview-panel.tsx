@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { formatCurrency } from "@/lib/utils";
 
 type PreviewData = {
@@ -43,7 +43,15 @@ export function NotePreviewPanel({
     router.push(`/notes/${noteId}/payment`);
   }
 
-  if (loading) return <Skeleton className={compact ? "h-48 w-full" : "h-72 w-full"} />;
+  if (loading) {
+    return (
+      <BrandLoading
+        size={compact ? "sm" : "md"}
+        className={compact ? "h-48 w-full" : "h-72 w-full"}
+        message="Loading preview…"
+      />
+    );
+  }
 
   if (!data?.url && !data?.owned) {
     return (

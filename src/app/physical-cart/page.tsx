@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { readJsonResponse } from "@/lib/api/fetch-json";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function PhysicalCartPage() {
   const [cart, setCart] = useState<any>(null);
@@ -65,7 +66,7 @@ export default function PhysicalCartPage() {
         <div className="lg:col-span-2 space-y-4">
           <h1 className="text-2xl font-bold">Physical Cart</h1>
           {loading ? (
-            <p className="text-slate-500">Loading…</p>
+            <BrandLoading fullPage message="Loading cart…" />
           ) : !cart?.items?.length ? (
             <Card>
               <CardContent className="py-10 text-center">

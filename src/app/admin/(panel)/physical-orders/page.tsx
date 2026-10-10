@@ -6,17 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function AdminPhysicalOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
 
   async function load() {
+    setLoading(true);
     const params = new URLSearchParams({ pageSize: "50" });
     if (q) params.set("q", q);
     const res = await fetch(`/api/admin/physical-orders?${params}`);
     const data = await res.json();
     setOrders(data.orders ?? []);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -32,6 +36,9 @@ export default function AdminPhysicalOrdersPage() {
           Search
         </Button>
       </div>
+      {loading ? (
+        <BrandLoading fullPage message="Loading orders…" />
+      ) : (
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="min-w-full text-sm">
@@ -64,6 +71,7 @@ export default function AdminPhysicalOrdersPage() {
           </table>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

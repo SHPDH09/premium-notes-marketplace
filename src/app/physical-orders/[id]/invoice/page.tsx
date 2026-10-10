@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { brand } from "@/config/brand";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function PhysicalInvoicePage() {
   const params = useParams();
@@ -32,7 +33,7 @@ export default function PhysicalInvoicePage() {
     void load();
   }, [id]);
 
-  if (!order) return <p className="p-8 text-center">Loading invoice…</p>;
+  if (!order) return <BrandLoading fullPage size="lg" message="Loading invoice…" />;
 
   return (
     <div className="min-h-screen bg-white p-8 print:p-4">

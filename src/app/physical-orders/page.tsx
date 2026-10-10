@@ -7,21 +7,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { PaymentStatusBadge, FulfillmentStatusBadge } from "@/components/physical/status-badge";
 import { Button } from "@/components/ui/button";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function PhysicalOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void fetch("/api/physical-orders", { credentials: "include" })
       .then((r) => r.json())
-      .then((d) => setOrders(d.orders ?? []));
+      .then((d) => setOrders(d.orders ?? []))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <StudentShell>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Physical Orders</h1>
-        {orders.length === 0 ? (
+        {loading ? (
+          <BrandLoading fullPage message="Loading orders…" />
+        ) : orders.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-slate-500">
               You haven&apos;t placed any physical document orders yet.

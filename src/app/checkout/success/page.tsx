@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 function SuccessContent() {
   const params = useSearchParams();
@@ -56,7 +57,7 @@ export default function CheckoutSuccessPage() {
   return (
     <div>
       <PublicNavbar />
-      <Suspense fallback={<p className="py-20 text-center">Loading...</p>}>
+      <Suspense fallback={<BrandLoading fullPage message="Loading…" />}>
         <SuccessContent />
       </Suspense>
     </div>

@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { readJsonResponse } from "@/lib/api/fetch-json";
 import { LegalAcceptance } from "@/components/legal/legal-acceptance";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function PhysicalCheckoutPage() {
   const { data: session, status } = useSession();
@@ -93,7 +94,13 @@ export default function PhysicalCheckoutPage() {
     );
   }
 
-  if (status === "loading") return null;
+  if (status === "loading") {
+    return (
+      <StudentShell>
+        <BrandLoading fullPage message="Loading checkout…" />
+      </StudentShell>
+    );
+  }
 
   return (
     <StudentShell>

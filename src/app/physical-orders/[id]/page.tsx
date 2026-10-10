@@ -10,6 +10,7 @@ import { PaymentStatusBadge, FulfillmentStatusBadge } from "@/components/physica
 import { PhysicalOrderJourney } from "@/components/physical/order-journey";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function PhysicalOrderDetailPage() {
   const params = useParams();
@@ -42,7 +43,7 @@ export default function PhysicalOrderDetailPage() {
   if (!order) {
     return (
       <StudentShell>
-        <p className="text-slate-500">Loading order…</p>
+        <BrandLoading fullPage message="Loading order…" />
       </StudentShell>
     );
   }
