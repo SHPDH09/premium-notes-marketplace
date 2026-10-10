@@ -30,7 +30,7 @@ export function NotePreviewPanel({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/notes/${noteId}/preview`)
+    fetch(`/api/notes/${noteId}/preview`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setData(null);
@@ -84,12 +84,17 @@ export function NotePreviewPanel({
         )}
       </div>
 
-      <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
+      <div
+        className="relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner"
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {data?.url && (
           <iframe
             title="Notes preview"
-            src={`${data.url}#toolbar=0&navpanes=0`}
+            src={`${data.url}#toolbar=0&navpanes=0&scrollbar=1`}
             className={compact ? "h-52 w-full bg-white" : "h-80 w-full bg-white"}
+            sandbox="allow-same-origin allow-scripts"
+            referrerPolicy="no-referrer"
           />
         )}
 

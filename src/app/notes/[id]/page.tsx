@@ -50,11 +50,8 @@ export default function NoteDetailPage() {
     toast.success("Added to cart");
   }
 
-  async function openNotes() {
-    const res = await fetch(`/api/purchases/${id}/access`);
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error ?? "Access denied");
-    window.open(data.url, "_blank");
+  function openNotes() {
+    router.push(`/purchases/${id}/view`);
   }
 
   if (loading) {

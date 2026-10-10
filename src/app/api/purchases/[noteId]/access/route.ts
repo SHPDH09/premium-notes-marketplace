@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireStudent } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
-import { getSignedDownloadUrl } from "@/lib/storage";
 
+/** Returns in-app viewer path only — no direct download URLs. */
 export async function GET(_req: NextRequest, { params }: { params: { noteId: string } }) {
   const auth = await requireStudent();
   if (auth.error) return auth.error;
@@ -20,15 +20,19 @@ export async function GET(_req: NextRequest, { params }: { params: { noteId: str
 
   const note = purchase.note;
   if (note.notesLink) {
-    return NextResponse.json({ type: "link", url: note.notesLink });
+    return NextResponse.json({
+      type: "viewer",
+      viewerPath: `/purchases/${params.noteId}/view`,
+      external: true,
+    });
   }
 
   if (note.pdfStorageKey) {
-    const url = await getSignedDownloadUrl(note.pdfStorageKey, 600);
-    if (!url) {
-      return NextResponse.json({ error: "File access unavailable" }, { status: 503 });
-    }
-    return NextResponse.json({ type: "pdf", url });
+    return NextResponse.json({
+      type: "viewer",
+      viewerPath: `/purchases/${params.noteId}/view`,
+      external: false,
+    });
   }
 
   return NextResponse.json({ error: "No content available" }, { status: 404 });
