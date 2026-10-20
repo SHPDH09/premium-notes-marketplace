@@ -16,14 +16,19 @@ export function validatePdfFile(file: File): string | null {
   return null;
 }
 
+export type StorageFolder = "covers" | "pdfs" | "resumes";
+
 export function validatePresignRequest(
-  folder: "covers" | "pdfs",
+  folder: StorageFolder,
   contentType: string,
   size: number
 ): string | null {
   if (folder === "covers") {
     if (!contentType.startsWith("image/")) return "Invalid image type.";
     if (size > MAX_IMAGE_BYTES) return "Cover image must be under 5MB.";
+  } else if (folder === "resumes") {
+    if (contentType !== "application/pdf") return "Resume must be a PDF.";
+    if (size > MAX_PDF_BYTES) return "Resume PDF must be under 25MB.";
   } else {
     if (contentType !== "application/pdf") return "Invalid PDF type.";
     if (size > MAX_PDF_BYTES) return "PDF must be under 25MB.";
@@ -32,7 +37,7 @@ export function validatePresignRequest(
   return null;
 }
 
-export function isAllowedStorageKey(key: string | null | undefined, folder: "covers" | "pdfs"): boolean {
+export function isAllowedStorageKey(key: string | null | undefined, folder: StorageFolder): boolean {
   if (!key) return false;
   if (!key.startsWith(`${folder}/`)) return false;
   if (key.includes("..")) return false;

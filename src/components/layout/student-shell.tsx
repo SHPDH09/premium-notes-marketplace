@@ -13,6 +13,7 @@ import {
   Menu,
   Package,
   Truck,
+  Briefcase,
 } from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -24,6 +25,8 @@ const nav = [
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/physical-documents", label: "Physical Documents", icon: Package },
   { href: "/physical-orders", label: "Physical Orders", icon: Truck },
+  { href: "/placement", label: "Placement", icon: Briefcase },
+  { href: "/profile/placement", label: "Placement Profile", icon: Briefcase },
   { href: "/profile", label: "Profile", icon: User },
 ];
 

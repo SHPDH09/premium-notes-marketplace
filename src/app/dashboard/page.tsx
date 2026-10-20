@@ -4,6 +4,7 @@ import Link from "next/link";
 import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
 
 export default function DashboardPage() {
   return (
@@ -19,6 +20,7 @@ export default function DashboardPage() {
             { title: "Purchased Notes", href: "/purchases", desc: "Secure access to content" },
             { title: "Transactions", href: "/transactions", desc: "Payment history" },
             { title: "Profile", href: "/profile", desc: "Update account details" },
+            { title: "Placement", href: "/placement", desc: "Jobs for subscribed members" },
           ].map((item) => (
             <Card key={item.href}>
               <CardHeader>
@@ -33,6 +35,7 @@ export default function DashboardPage() {
             </Card>
           ))}
         </div>
+        <PlacedStudentsStrip title="Our placed students" />
         <Button asChild>
           <Link href="/notes">Browse Notes</Link>
         </Button>

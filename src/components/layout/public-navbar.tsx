@@ -15,6 +15,7 @@ export function PublicNavbar() {
   const links = [
     { href: "/", label: "Home" },
     { href: "/notes", label: "Notes" },
+    { href: "/placement", label: "Placement" },
     { href: "/privacy", label: "Privacy" },
     { href: "/terms", label: "Terms" },
   ];

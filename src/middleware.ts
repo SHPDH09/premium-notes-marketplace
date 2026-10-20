@@ -23,7 +23,7 @@ export default withAuth(
       path.startsWith("/physical-checkout") ||
       path.startsWith("/physical-orders") ||
       path.startsWith("/addresses") ||
-      path === "/profile"
+      path.startsWith("/profile")
     ) {
       if (!token || token.role !== "STUDENT") {
         return NextResponse.redirect(new URL("/login", req.url));
@@ -56,7 +56,7 @@ export default withAuth(
           path.startsWith("/physical-cart") ||
           path.startsWith("/physical-orders") ||
           path.startsWith("/addresses") ||
-          path === "/profile"
+          path.startsWith("/profile")
         ) {
           return !!token;
         }
@@ -74,7 +74,7 @@ export const config = {
     "/purchases/:path*",
     "/transactions",
     "/orders/:path*",
-    "/profile",
+    "/profile/:path*",
     "/physical-documents/:path*",
     "/physical-cart",
     "/physical-checkout/:path*",
