@@ -25,6 +25,12 @@ export function siteMetadata(overrides?: Metadata): Metadata {
       url: brand.website,
       images: [
         {
+          url: "/opengraph-image",
+          width: 1200,
+          height: 630,
+          alt: `${brand.name} logo`,
+        },
+        {
           url: logoPath,
           width: 1200,
           height: 630,
