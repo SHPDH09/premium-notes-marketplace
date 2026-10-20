@@ -795,9 +795,23 @@ model UserPlacementSubscription {
 
   user User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan PlacementSubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  reminders PlacementSubscriptionReminder[]
 
   @@index([userId, status])
+  @@index([endsAt, status])
   @@map("user_placement_subscriptions")
+}
+
+model PlacementSubscriptionReminder {
+  id             String   @id @default(cuid())
+  subscriptionId String   @map("subscription_id")
+  daysBeforeEnd  Int      @map("days_before_end")
+  sentAt         DateTime @default(now()) @map("sent_at")
+
+  subscription UserPlacementSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, daysBeforeEnd])
+  @@map("placement_subscription_reminders")
 }
 
 model StudentCareerProfile {
