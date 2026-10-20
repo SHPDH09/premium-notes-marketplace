@@ -8,14 +8,25 @@ export async function GET() {
   const auth = await requireStudent();
   if (auth.error) return auth.error;
 
-  const profile = await prisma.studentCareerProfile.findUnique({
-    where: { userId: auth.session!.user.id },
-  });
+  try {
+    const profile = await prisma.studentCareerProfile.findUnique({
+      where: { userId: auth.session!.user.id },
+    });
 
-  return NextResponse.json({
-    smtpEmail: profile?.smtpEmail ?? "",
-    emailConfigured: !!(profile?.smtpEmail && profile?.smtpAppPasswordEnc),
-  });
+    return NextResponse.json({
+      smtpEmail: profile?.smtpEmail ?? "",
+      emailConfigured: !!(profile?.smtpEmail && profile?.smtpAppPasswordEnc),
+    });
+  } catch (e) {
+    console.error("placement smtp GET", e);
+    return NextResponse.json(
+      {
+        error:
+          "Placement database tables are not ready yet. Redeploy after migrations or contact support.",
+      },
+      { status: 503 }
+    );
+  }
 }
 
 const patchSchema = z.object({
