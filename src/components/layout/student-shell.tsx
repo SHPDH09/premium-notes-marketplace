@@ -14,25 +14,55 @@ import {
   Package,
   Truck,
   Briefcase,
+  Mail,
+  ClipboardList,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 
-const nav = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: number | null;
+};
+
+const baseNav: Omit<NavItem, "badge">[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/purchases", label: "Purchased Notes", icon: BookOpen },
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/physical-documents", label: "Physical Documents", icon: Package },
   { href: "/physical-orders", label: "Physical Orders", icon: Truck },
-  { href: "/placement", label: "Placement", icon: Briefcase },
-  { href: "/profile/placement", label: "Placement Profile", icon: Briefcase },
+  { href: "/placement", label: "Placement jobs", icon: Briefcase },
+  { href: "/profile/placement", label: "Placement profile", icon: Briefcase },
+  { href: "/dashboard/placement/job-postings", label: "My job posts", icon: ClipboardList },
+  { href: "/dashboard/placement/email-setup", label: "Placement email setup", icon: Mail },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [jobPostCount, setJobPostCount] = useState<number | null>(null);
+
+  function loadJobPostCount() {
+    fetch("/api/student/placement/status", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setJobPostCount(typeof d.jobPostCount === "number" ? d.jobPostCount : 0))
+      .catch(() => setJobPostCount(null));
+  }
+
+  useEffect(() => {
+    loadJobPostCount();
+    const onUpdate = () => loadJobPostCount();
+    window.addEventListener("tl-job-posts-changed", onUpdate);
+    return () => window.removeEventListener("tl-job-posts-changed", onUpdate);
+  }, [pathname]);
+
+  const nav: NavItem[] = baseNav.map((item) =>
+    item.href === "/dashboard/placement/job-postings" ? { ...item, badge: jobPostCount } : item
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -58,8 +88,18 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                     active ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-50"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge != null ? (
+                    <span
+                      className={cn(
+                        "min-w-[1.25rem] rounded-full px-2 py-0.5 text-center text-xs font-semibold",
+                        item.badge > 0 ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-600"
+                      )}
+                    >
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}

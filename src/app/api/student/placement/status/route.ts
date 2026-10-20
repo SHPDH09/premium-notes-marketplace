@@ -8,13 +8,15 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const userId = auth.session!.user.id;
-  const [profile, sub] = await Promise.all([
+  const [profile, sub, jobPostCount] = await Promise.all([
     prisma.studentCareerProfile.findUnique({ where: { userId } }),
     getActivePlacementSubscription(userId),
+    prisma.jobPosting.count({ where: { submittedByUserId: userId, source: "STUDENT" } }),
   ]);
 
   return NextResponse.json({
     subscribed: !!sub,
+    jobPostCount,
     subscription: sub
       ? {
           planName: sub.plan.name,

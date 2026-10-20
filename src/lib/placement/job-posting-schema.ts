@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { JobApplyType } from "@prisma/client";
 
+function normalizeOptionalUrl(value: string | null | undefined): string | null {
+  if (value == null || !String(value).trim()) return null;
+  const trimmed = String(value).trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 export const jobPostingInputSchema = z
   .object({
     title: z.string().min(2),
@@ -9,7 +16,11 @@ export const jobPostingInputSchema = z
     applyType: z.nativeEnum(JobApplyType),
     description: z.string().min(10),
     applyEmail: z.string().email().nullable().optional(),
-    applyUrl: z.string().url().nullable().optional(),
+    applyUrl: z
+      .string()
+      .nullable()
+      .optional()
+      .transform((v) => normalizeOptionalUrl(v)),
     applyPhone: z.string().min(8).max(32).nullable().optional(),
     walkInDetails: z.string().nullable().optional(),
     requiresSubscription: z.boolean().optional(),

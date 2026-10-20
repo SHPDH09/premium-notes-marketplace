@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatApiError } from "@/lib/api/format-api-error";
 import { toast } from "sonner";
 import { Eye, Send, Users } from "lucide-react";
 import {
@@ -93,13 +94,14 @@ export function StudentJobPostingsSection() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error?.message ?? data.error ?? "Could not submit");
+        toast.error(formatApiError(data.error));
         return;
       }
       toast.success(editingId ? "Updated — sent for review again" : "Job submitted for admin approval");
       setForm(emptyJobPostingForm());
       setEditingId(null);
       load();
+      window.dispatchEvent(new Event("tl-job-posts-changed"));
     } finally {
       setSubmitting(false);
     }

@@ -12,8 +12,11 @@ export function siteMetadata(overrides?: Metadata): Metadata {
     },
     description: brand.tagline,
     icons: {
-      icon: [{ url: logoPath, type: "image/png" }],
-      shortcut: [logoPath],
+      icon: [
+        { url: "/favicon.ico", sizes: "any" },
+        { url: logoPath, type: "image/png" },
+      ],
+      shortcut: [{ url: "/favicon.ico" }],
       apple: [{ url: logoPath, type: "image/png" }],
     },
     openGraph: {

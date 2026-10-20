@@ -57,11 +57,19 @@ export function PlacementDashboardHub() {
               Resume & templates
             </Link>
           </Button>
+          <Button asChild size="lg" variant="secondary" className="border-white/30 bg-white/10 text-white hover:bg-white/20">
+            <Link href="/dashboard/placement/job-postings">Post a job</Link>
+          </Button>
         </div>
       </div>
-      <p className="mt-4 flex items-center gap-2 text-xs text-indigo-100">
-        <Mail className="h-3.5 w-3.5" />
-        Scroll down for <strong className="font-semibold text-white">Placement email setup</strong> (Gmail + app password).
+      <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-indigo-100">
+        <Link href="/dashboard/placement/email-setup" className="inline-flex items-center gap-2 hover:text-white">
+          <Mail className="h-3.5 w-3.5" />
+          Placement email setup
+        </Link>
+        <Link href="/dashboard/placement/job-postings" className="hover:text-white underline-offset-2 hover:underline">
+          My job posts (sidebar)
+        </Link>
       </p>
     </section>
   );

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BrandLoading } from "@/components/brand/brand-loading";
+import { formatApiError } from "@/lib/api/format-api-error";
 import { toast } from "sonner";
 import {
   JobPostingFormFields,
@@ -81,7 +82,7 @@ export default function AdminStudentSubmissionsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed");
+        toast.error(formatApiError(data.error));
         return;
       }
       toast.success(

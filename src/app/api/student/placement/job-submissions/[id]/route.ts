@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireStudent } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
+import { formatZodFlatten } from "@/lib/api/format-api-error";
 import { jobPostingInputSchema } from "@/lib/placement/job-posting-schema";
 import { serializeStudentJobSubmission } from "@/lib/placement/serialize-student-job";
 
@@ -24,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const parsed = jobPostingInputSchema.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: formatZodFlatten(parsed.error.flatten()) }, { status: 400 });
   }
 
   const d = parsed.data;

@@ -5,9 +5,7 @@ import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
-import { PlacementEmailSetup } from "@/components/placement/placement-email-setup";
 import { PlacementDashboardHub } from "@/components/placement/placement-dashboard-hub";
-import { StudentJobPostingsSection } from "@/components/placement/student-job-postings-section";
 
 export default function DashboardPage() {
   return (
@@ -19,10 +17,6 @@ export default function DashboardPage() {
         </div>
 
         <PlacementDashboardHub />
-
-        <PlacementEmailSetup />
-
-        <StudentJobPostingsSection />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[

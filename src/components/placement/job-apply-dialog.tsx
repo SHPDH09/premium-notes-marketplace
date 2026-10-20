@@ -430,8 +430,8 @@ export function JobApplyDialog({
                   ) : (
                     <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
                       For one-tap send with resume attached, set up Gmail on your{" "}
-                      <Link href="/dashboard" className="font-medium text-indigo-700 underline">
-                        Dashboard → Placement email setup
+                      <Link href="/dashboard/placement/email-setup" className="font-medium text-indigo-700 underline">
+                        Placement email setup
                       </Link>{" "}
                       (includes link to create Google App Password).
                     </p>

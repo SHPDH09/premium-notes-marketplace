@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatApiError } from "@/lib/api/format-api-error";
 import { toast } from "sonner";
 import { CheckCircle2, ExternalLink } from "lucide-react";
 import {
@@ -49,7 +50,7 @@ export function PlacementEmailSetup() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Setup failed");
+        toast.error(formatApiError(data.error));
         return;
       }
       setConfigured(true);
