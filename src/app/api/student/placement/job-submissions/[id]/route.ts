@@ -72,10 +72,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       { status: 403 }
     );
   }
-  if (existing.reviewStatus === "VERIFIED") {
-    return NextResponse.json({ error: "Live jobs cannot be deleted" }, { status: 403 });
-  }
-
   await prisma.jobPosting.delete({ where: { id: existing.id } });
   return NextResponse.json({ ok: true });
 }

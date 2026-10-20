@@ -73,12 +73,15 @@ export function StudentJobPostingsSection() {
     fetch("/api/student/placement/job-submissions", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
-        const list = d.jobs ?? [];
+        const list: Submission[] = d.jobs ?? [];
         setJobs(list);
-        if (editingId && list.find((j: Submission) => j.id === editingId)?.locked) {
-          setEditingId(null);
-          setForm(emptyJobPostingForm());
-        }
+        setEditingId((current) => {
+          if (current && list.find((j) => j.id === current)?.locked) {
+            setForm(emptyJobPostingForm());
+            return null;
+          }
+          return current;
+        });
       })
       .finally(() => setLoading(false));
   }
