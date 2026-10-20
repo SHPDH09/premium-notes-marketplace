@@ -12,6 +12,7 @@ export function serializeJobPosting(job: JobPosting) {
     description: job.description,
     applyEmail: job.applyEmail,
     applyUrl: job.applyUrl,
+    applyPhone: job.applyPhone,
     walkInDetails: job.walkInDetails,
     requiresSubscription: job.requiresSubscription,
     status: job.status,
@@ -20,10 +21,15 @@ export function serializeJobPosting(job: JobPosting) {
   };
 }
 
-/** Public job board — no recruiter email in API or share payloads. */
+/** Public job board — no recruiter email or WhatsApp number in API or share payloads. */
 export function serializeJobPostingPublic(job: JobPosting) {
   const full = serializeJobPosting(job);
-  const { applyEmail: _removed, ...rest } = full;
+  const { applyEmail, applyPhone, ...rest } = full;
+  void applyEmail;
+  if (job.applyType === "CALL") {
+    return { ...rest, applyPhone };
+  }
+  void applyPhone;
   return rest;
 }
 

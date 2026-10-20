@@ -1,0 +1,10 @@
+-- AlterEnum
+ALTER TYPE "JobApplyType" ADD VALUE IF NOT EXISTS 'CALL';
+ALTER TYPE "JobApplyType" ADD VALUE IF NOT EXISTS 'WHATSAPP';
+
+-- AlterEnum
+ALTER TYPE "JobApplicationChannel" ADD VALUE IF NOT EXISTS 'CALL';
+ALTER TYPE "JobApplicationChannel" ADD VALUE IF NOT EXISTS 'WHATSAPP';
+
+-- AlterTable
+ALTER TABLE "job_postings" ADD COLUMN IF NOT EXISTS "apply_phone" TEXT;

@@ -148,6 +148,8 @@ enum JobApplyType {
   EMAIL
   LINK
   WALK_IN
+  CALL
+  WHATSAPP
 }
 
 enum JobApplicationChannel {
@@ -155,6 +157,8 @@ enum JobApplicationChannel {
   EMAIL_MAILTO
   EXTERNAL_LINK
   WALK_IN
+  CALL
+  WHATSAPP
 }
 
 enum PlacementSubscriptionStatus {
@@ -839,6 +843,7 @@ model JobPosting {
   description          String        @db.Text
   applyEmail           String?       @map("apply_email")
   applyUrl             String?       @map("apply_url")
+  applyPhone           String?       @map("apply_phone")
   walkInDetails        String?       @map("walk_in_details") @db.Text
   requiresSubscription Boolean       @default(true) @map("requires_subscription")
   status               PublishStatus @default(ACTIVE)

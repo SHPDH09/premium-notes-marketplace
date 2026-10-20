@@ -18,7 +18,7 @@ import { Briefcase, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatAppliedAt } from "@/lib/placement/format-applied-at";
 
-type JobApplyType = "EMAIL" | "LINK" | "WALK_IN";
+type JobApplyType = "EMAIL" | "LINK" | "WALK_IN" | "CALL" | "WHATSAPP";
 
 type Job = {
   id: string;
@@ -27,6 +27,7 @@ type Job = {
   location?: string | null;
   applyType: JobApplyType;
   description: string;
+  applyPhone?: string | null;
   appliedAt?: string | null;
 };
 
@@ -35,6 +36,8 @@ const APPLY_TYPE_FILTERS: { value: "ALL" | JobApplyType; label: string }[] = [
   { value: "EMAIL", label: "Email based" },
   { value: "LINK", label: "Link based" },
   { value: "WALK_IN", label: "Walk-in" },
+  { value: "CALL", label: "Call" },
+  { value: "WHATSAPP", label: "WhatsApp" },
 ];
 
 function PlacementPageContent() {

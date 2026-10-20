@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { BrandLoading } from "@/components/brand/brand-loading";
 
-const APPLY_TYPES = ["EMAIL", "LINK", "WALK_IN"] as const;
+const APPLY_TYPES = ["EMAIL", "LINK", "WALK_IN", "CALL", "WHATSAPP"] as const;
 
 export default function AdminPlacementJobsPage() {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -22,6 +22,7 @@ export default function AdminPlacementJobsPage() {
     description: "",
     applyEmail: "",
     applyUrl: "",
+    applyPhone: "",
     walkInDetails: "",
     sortOrder: "0",
   });
@@ -51,6 +52,7 @@ export default function AdminPlacementJobsPage() {
         description: form.description,
         applyEmail: form.applyEmail || null,
         applyUrl: form.applyUrl || null,
+        applyPhone: form.applyPhone || null,
         walkInDetails: form.walkInDetails || null,
         sortOrder: parseInt(form.sortOrder, 10) || 0,
       }),
@@ -66,6 +68,7 @@ export default function AdminPlacementJobsPage() {
       description: "",
       applyEmail: "",
       applyUrl: "",
+      applyPhone: "",
       walkInDetails: "",
       sortOrder: "0",
     });
@@ -94,7 +97,7 @@ export default function AdminPlacementJobsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Placement — Job postings</h1>
-        <p className="text-slate-500">Email, external link, or walk-in jobs for subscribed students.</p>
+        <p className="text-slate-500">Email, link, walk-in, call, or WhatsApp jobs for subscribed students.</p>
       </div>
 
       <form onSubmit={create} className="grid gap-4 rounded-2xl border bg-white p-6 md:grid-cols-2">
@@ -162,6 +165,18 @@ export default function AdminPlacementJobsPage() {
               rows={3}
               value={form.walkInDetails}
               onChange={(e) => setForm({ ...form, walkInDetails: e.target.value })}
+              required
+            />
+          </div>
+        ) : null}
+        {form.applyType === "CALL" || form.applyType === "WHATSAPP" ? (
+          <div>
+            <Label>{form.applyType === "WHATSAPP" ? "WhatsApp number" : "Phone number"}</Label>
+            <Input
+              type="tel"
+              placeholder="+91 9876543210"
+              value={form.applyPhone}
+              onChange={(e) => setForm({ ...form, applyPhone: e.target.value })}
               required
             />
           </div>

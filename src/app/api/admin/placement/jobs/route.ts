@@ -22,6 +22,7 @@ const createSchema = z.object({
   description: z.string().min(10),
   applyEmail: z.string().email().nullable().optional(),
   applyUrl: z.string().url().nullable().optional(),
+  applyPhone: z.string().min(8).max(20).nullable().optional(),
   walkInDetails: z.string().nullable().optional(),
   requiresSubscription: z.boolean().optional(),
   status: z.nativeEnum(PublishStatus).optional(),
@@ -44,6 +45,9 @@ export async function POST(req: NextRequest) {
     if (d.applyType === "WALK_IN" && !d.walkInDetails?.trim()) {
       return NextResponse.json({ error: "Walk-in details are required" }, { status: 400 });
     }
+    if ((d.applyType === "CALL" || d.applyType === "WHATSAPP") && !d.applyPhone?.trim()) {
+      return NextResponse.json({ error: "Phone / WhatsApp number is required" }, { status: 400 });
+    }
 
     const job = await prisma.jobPosting.create({
       data: {
@@ -54,6 +58,7 @@ export async function POST(req: NextRequest) {
         description: d.description,
         applyEmail: d.applyEmail ?? null,
         applyUrl: d.applyUrl ?? null,
+        applyPhone: d.applyPhone?.trim() ?? null,
         walkInDetails: d.walkInDetails ?? null,
         requiresSubscription: d.requiresSubscription ?? true,
         status: d.status ?? "ACTIVE",
