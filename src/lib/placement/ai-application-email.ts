@@ -20,9 +20,7 @@ function fallbackEmail(params: GenerateParams) {
     ``,
     `From my background, I believe I can contribute meaningfully to your team. Please find my resume attached for your review.`,
     ``,
-    params.resumeText.trim()
-      ? `A brief overview of my profile:\n${params.resumeText.trim().slice(0, 1200)}`
-      : `I have uploaded my resume on my TechLaunchpad placement profile.`,
+    `I have attached my resume, which includes my experience, skills, and projects relevant to this role.`,
     ``,
     `Thank you for considering my application. I would welcome the opportunity to discuss how I can support ${params.company}.`,
     ``,
@@ -51,6 +49,7 @@ Style:
 - End with a polite close and the candidate's name.
 - If customHeader/customFooter are non-empty in the input, place them at the very top and very bottom of body.
 - Mention that the resume is attached (once, naturally).
+- Do NOT paste or duplicate the full resume, contact block, or long bullet lists in the email body — write a short cover letter only.
 
 Never fabricate employers, degrees, certifications, or years of experience not supported by the resume text.`;
 

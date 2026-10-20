@@ -35,6 +35,7 @@ export function JobApplyDialog({
     body: string;
     source: string;
     hasResumeFile: boolean;
+    emailConfigured?: boolean;
   } | null>(null);
   const [emailConfigured, setEmailConfigured] = useState(false);
   const [sending, setSending] = useState(false);
@@ -113,10 +114,13 @@ export function JobApplyDialog({
 
   async function openMailApp() {
     if (!emailDraft) return;
+    if (emailDraft.hasResumeFile) {
+      await downloadResume();
+    }
     const appliedAt = await recordApply("EMAIL_MAILTO");
     if (!appliedAt) return;
     window.location.href = buildMailtoUrl(emailDraft.to, emailDraft.subject, emailDraft.body);
-    toast.success("Application recorded. Complete send in your email app.");
+    toast.message("Email opened — attach the resume PDF you downloaded, then send.");
     onOpenChange(false);
   }
 
@@ -230,8 +234,8 @@ export function JobApplyDialog({
             ) : (
               <>
                 <p className="text-xs text-slate-500">
-                  Browsers cannot auto-attach files to email. We pre-fill the message; attach the same resume from
-                  your profile.
+                  Recommended: <strong>Send from my Gmail</strong> — resume PDF is attached automatically. The
+                  email app option cannot attach files; you must add the PDF yourself.
                 </p>
                 <div className="rounded-lg border bg-white p-3 text-sm">
                   <p className="font-medium text-slate-900">To: {emailDraft.to}</p>
@@ -241,28 +245,30 @@ export function JobApplyDialog({
                   </pre>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {emailConfigured ? (
+                  {emailConfigured || emailDraft.emailConfigured ? (
                     <Button type="button" disabled={sending} onClick={() => void sendViaGmail()}>
                       {sending ? "Sending…" : "Send from my Gmail (resume attached)"}
                     </Button>
                   ) : (
-                    <p className="text-xs text-amber-800">
-                      Add Gmail + app password on your Dashboard → Placement email setup to send with attachment
-                      automatically.
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      Set up Gmail + app password on Dashboard → Placement email setup to send with resume
+                      attached in one tap.
                     </p>
                   )}
                   {emailDraft.hasResumeFile ? (
                     <Button type="button" variant="secondary" onClick={() => void downloadResume()}>
-                      Download my resume (manual attach)
+                      Download resume PDF
                     </Button>
                   ) : (
                     <p className="text-xs text-amber-800">
                       Upload a resume under Profile → Placement before sending.
                     </p>
                   )}
-                  <Button type="button" variant="outline" onClick={() => void openMailApp()}>
-                    Open email app with message
-                  </Button>
+                  {!emailConfigured && !emailDraft.emailConfigured ? (
+                    <Button type="button" variant="outline" onClick={() => void openMailApp()}>
+                      Open phone email app (attach PDF manually)
+                    </Button>
+                  ) : null}
                 </div>
               </>
             )}

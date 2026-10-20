@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireStudent } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
 import { generateApplicationEmail } from "@/lib/placement/ai-application-email";
+import { resumeTextForEmailGeneration } from "@/lib/placement/resume-text-for-email";
 import { userHasActivePlacementSubscription } from "@/lib/placement/subscription";
 
 const schema = z.object({
@@ -35,9 +36,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  const resumeText =
+  const resumeRaw =
     profile?.resumeText?.trim() ||
     "The candidate uploaded a resume PDF on TechLaunchpad. Use a professional tone and ask the recruiter to review the attached resume.";
+  const resumeText = resumeTextForEmailGeneration(resumeRaw) || resumeRaw;
 
   const generated = await generateApplicationEmail({
     studentName: user.name,
@@ -57,5 +59,6 @@ export async function POST(req: NextRequest) {
     source: generated.source,
     hasResumeFile: !!profile?.resumeStorageKey,
     hasResumeSummary: !!(profile?.resumeText && profile.resumeText.trim().length > 20),
+    emailConfigured: !!(profile?.smtpEmail && profile?.smtpAppPasswordEnc),
   });
 }

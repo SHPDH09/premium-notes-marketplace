@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireStudent } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
 import { generateApplicationEmail } from "@/lib/placement/ai-application-email";
+import { resumeTextForEmailGeneration } from "@/lib/placement/resume-text-for-email";
 import { userHasActivePlacementSubscription } from "@/lib/placement/subscription";
 import { decryptSecret } from "@/lib/secret-crypto";
 import { loadResumeBuffer, sendApplicationEmail } from "@/lib/placement/send-application-email";
@@ -51,9 +52,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Could not read saved email credentials. Save them again." }, { status: 500 });
   }
 
-  const resumeText =
+  const resumeRaw =
     profile.resumeText?.trim() ||
     "The candidate uploaded a resume PDF on TechLaunchpad. Please review the attached resume.";
+  const resumeText = resumeTextForEmailGeneration(resumeRaw) || resumeRaw;
 
   const generated = await generateApplicationEmail({
     studentName: user.name,
