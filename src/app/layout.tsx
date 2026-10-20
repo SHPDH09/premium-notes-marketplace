@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { brand } from "@/config/brand";
+import { siteMetadata } from "@/lib/site-metadata";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -11,8 +11,7 @@ const geistSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: `${brand.name} | Premium Notes Marketplace`,
-  description: brand.tagline,
+  ...siteMetadata(),
   verification: {
     google: "1PRAqy7h75iWJxlRQTuntewyJTLVsKVSkOj0v-aVUa8",
   },
