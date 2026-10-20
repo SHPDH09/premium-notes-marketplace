@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BrandLoading } from "@/components/brand/brand-loading";
 import { JobApplyDialog } from "@/components/placement/job-apply-dialog";
+import { JobShareButton } from "@/components/placement/job-share-button";
 import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
 import { Briefcase, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,9 +37,12 @@ const APPLY_TYPE_FILTERS: { value: "ALL" | JobApplyType; label: string }[] = [
   { value: "WALK_IN", label: "Walk-in" },
 ];
 
-export default function PlacementPage() {
+function PlacementPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightJobId = searchParams.get("job");
+  const scrolledRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [access, setAccess] = useState<string>("login_required");
   const [canApply, setCanApply] = useState(false);
@@ -64,6 +68,20 @@ export default function PlacementPage() {
   useEffect(() => {
     loadJobs();
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!highlightJobId || loading || scrolledRef.current) return;
+    const el = document.getElementById(`job-card-${highlightJobId}`);
+    if (el) {
+      scrolledRef.current = true;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-indigo-500", "ring-offset-2");
+      const t = window.setTimeout(() => {
+        el.classList.remove("ring-2", "ring-indigo-500", "ring-offset-2");
+      }, 4000);
+      return () => window.clearTimeout(t);
+    }
+  }, [highlightJobId, loading, jobs.length]);
 
   function markJobApplied(jobId: string, appliedAt: string) {
     setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, appliedAt } : j)));
@@ -168,7 +186,7 @@ export default function PlacementPage() {
         ) : (
           <div className="space-y-4">
             {filteredJobs.map((job) => (
-              <Card key={job.id}>
+              <Card key={job.id} id={`job-card-${job.id}`} className="scroll-mt-24 transition-shadow">
                 <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-xl">{job.title}</CardTitle>
@@ -180,17 +198,20 @@ export default function PlacementPage() {
                       {job.applyType.replace("_", " ")}
                     </p>
                   </div>
-                  {job.appliedAt ? (
-                    <div className="flex flex-col items-end gap-1 text-right">
-                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
-                        <CheckCircle2 className="h-4 w-4" aria-hidden />
-                        Already applied
-                      </span>
-                      <span className="text-xs text-slate-500">{formatAppliedAt(job.appliedAt)}</span>
-                    </div>
-                  ) : (
-                    <Button onClick={() => onApply(job)}>Apply</Button>
-                  )}
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <JobShareButton job={job} />
+                    {job.appliedAt ? (
+                      <div className="flex flex-col items-end gap-1 text-right">
+                        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+                          <CheckCircle2 className="h-4 w-4" aria-hidden />
+                          Already applied
+                        </span>
+                        <span className="text-xs text-slate-500">{formatAppliedAt(job.appliedAt)}</span>
+                      </div>
+                    ) : (
+                      <Button onClick={() => onApply(job)}>Apply</Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="whitespace-pre-wrap text-sm text-slate-700">{job.description}</p>
@@ -237,5 +258,13 @@ export default function PlacementPage() {
         onApplied={markJobApplied}
       />
     </div>
+  );
+}
+
+export default function PlacementPage() {
+  return (
+    <Suspense fallback={<BrandLoading fullPage message="Loading placement…" />}>
+      <PlacementPageContent />
+    </Suspense>
   );
 }
