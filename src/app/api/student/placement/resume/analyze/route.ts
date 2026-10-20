@@ -28,26 +28,19 @@ export async function POST() {
     );
   }
 
-  let extracted = "";
-  try {
-    extracted = await extractTextFromPdfBuffer(pdf);
-  } catch (e) {
-    console.error("PDF extract failed", e);
-    return NextResponse.json(
-      {
-        error:
-          "Could not read text from this PDF (it may be scanned/image-only). Paste a short summary in the box below.",
-      },
-      { status: 422 }
-    );
-  }
+  const { text: extracted, method } = await extractTextFromPdfBuffer(
+    pdf,
+    profile.resumeFileName ?? "resume.pdf"
+  );
 
   if (extracted.trim().length < 25) {
+    const hint = getPlacementOpenAiKey()
+      ? "Paste a short summary below, or try Regenerate again."
+      : "Add PLACEMENT_OPENAI_API_KEY on Vercel for scanned PDFs, or paste a summary below.";
     return NextResponse.json(
       {
-        error:
-          "Very little text found in the PDF. Use a text-based PDF or paste your summary manually.",
-        extractedLength: extracted.length,
+        error: `Could not read enough text from this PDF. ${hint}`,
+        extractMethod: method,
       },
       { status: 422 }
     );
@@ -68,6 +61,7 @@ export async function POST() {
     ok: true,
     resumeText: summary,
     summarySource: source,
+    extractMethod: method,
     openAiConfigured: !!getPlacementOpenAiKey(),
   });
 }
