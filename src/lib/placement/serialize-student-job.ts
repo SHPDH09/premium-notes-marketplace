@@ -1,4 +1,5 @@
 import type { JobPosting } from "@prisma/client";
+import { isStudentJobSubmissionLocked } from "@/lib/placement/student-job-submission-locked";
 
 type JobWithCounts = JobPosting & {
   _count?: { applications: number };
@@ -18,6 +19,7 @@ export function serializeStudentJobSubmission(job: JobWithCounts) {
     walkInDetails: job.walkInDetails,
     requiresSubscription: job.requiresSubscription,
     reviewStatus: job.reviewStatus,
+    locked: isStudentJobSubmissionLocked(job.reviewStatus),
     adminReviewNote: job.adminReviewNote,
     viewCount: job.viewCount,
     applyCount: job._count?.applications ?? 0,

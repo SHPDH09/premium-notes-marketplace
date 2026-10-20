@@ -19,6 +19,7 @@ type Submission = {
   title: string;
   company: string;
   reviewStatus: string;
+  locked?: boolean;
   adminReviewNote?: string | null;
   viewCount: number;
   applyCount: number;
@@ -36,9 +37,9 @@ function statusLabel(status: string) {
     case "PENDING":
       return "Pending admin review";
     case "APPROVED":
-      return "Approved — awaiting verify";
+      return "Approved — locked (awaiting verify publish)";
     case "VERIFIED":
-      return "Live on job board";
+      return "Live on job board — locked";
     case "REJECTED":
       return "Rejected";
     default:
@@ -71,7 +72,14 @@ export function StudentJobPostingsSection() {
     setLoading(true);
     fetch("/api/student/placement/job-submissions", { credentials: "include" })
       .then((r) => r.json())
-      .then((d) => setJobs(d.jobs ?? []))
+      .then((d) => {
+        const list = d.jobs ?? [];
+        setJobs(list);
+        if (editingId && list.find((j: Submission) => j.id === editingId)?.locked) {
+          setEditingId(null);
+          setForm(emptyJobPostingForm());
+        }
+      })
       .finally(() => setLoading(false));
   }
 
@@ -161,6 +169,11 @@ export function StudentJobPostingsSection() {
                       {j.adminReviewNote && j.reviewStatus === "REJECTED" ? (
                         <p className="mt-2 text-xs text-amber-800">Admin note: {j.adminReviewNote}</p>
                       ) : null}
+                      {j.locked ? (
+                        <p className="mt-2 text-xs text-slate-500">
+                          Locked after approval — view counts only. Edit or delete is not allowed.
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
                       <span className="inline-flex items-center gap-1">
@@ -171,7 +184,7 @@ export function StudentJobPostingsSection() {
                       </span>
                     </div>
                   </div>
-                  {(j.reviewStatus === "PENDING" || j.reviewStatus === "REJECTED") && (
+                  {!j.locked && (j.reviewStatus === "PENDING" || j.reviewStatus === "REJECTED") ? (
                     <Button
                       type="button"
                       size="sm"
@@ -184,7 +197,7 @@ export function StudentJobPostingsSection() {
                     >
                       Edit & resubmit
                     </Button>
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ul>
