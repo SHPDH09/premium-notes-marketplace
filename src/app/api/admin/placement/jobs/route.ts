@@ -22,7 +22,7 @@ const createSchema = z.object({
   description: z.string().min(10),
   applyEmail: z.string().email().nullable().optional(),
   applyUrl: z.string().url().nullable().optional(),
-  applyPhone: z.string().min(8).max(20).nullable().optional(),
+  applyPhone: z.string().min(8).max(32).nullable().optional(),
   walkInDetails: z.string().nullable().optional(),
   requiresSubscription: z.boolean().optional(),
   status: z.nativeEnum(PublishStatus).optional(),

@@ -22,6 +22,8 @@ import {
   Settings,
   Briefcase,
   Award,
+  BarChart3,
+  ClipboardList,
 } from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -34,7 +36,9 @@ const nav = [
   { href: "/admin/collaborators", label: "Collaborations", icon: Handshake },
   { href: "/admin/homepage", label: "Homepage", icon: Home },
   { href: "/admin/placement/jobs", label: "Placement Jobs", icon: Briefcase },
+  { href: "/admin/placement/student-submissions", label: "Student Job Posts", icon: ClipboardList },
   { href: "/admin/placement/subscriptions", label: "Placement Plans", icon: Briefcase },
+  { href: "/admin/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin/placed-students", label: "Placed Students", icon: Award },
   { href: "/admin/popups", label: "Popups", icon: Megaphone },
   { href: "/admin/physical-documents", label: "Physical Docs", icon: Package },

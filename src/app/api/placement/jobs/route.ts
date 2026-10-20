@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
+import { publicJobBoardWhere } from "@/lib/placement/job-board-visible";
 import { serializeJobPostingPublic, serializePlacementPlan } from "@/lib/placement/serialize";
 import { userHasActivePlacementSubscription } from "@/lib/placement/subscription";
 
@@ -15,7 +16,7 @@ export async function GET() {
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     prisma.jobPosting.findMany({
-      where: { status: "ACTIVE" },
+      where: publicJobBoardWhere,
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
     }),
   ]);

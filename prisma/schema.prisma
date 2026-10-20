@@ -167,6 +167,19 @@ enum PlacementSubscriptionStatus {
   CANCELLED
 }
 
+enum JobPostingSource {
+  ADMIN
+  STUDENT
+}
+
+enum JobReviewStatus {
+  NONE
+  PENDING
+  APPROVED
+  VERIFIED
+  REJECTED
+}
+
 model User {
   id            String     @id @default(cuid())
   name          String
@@ -198,6 +211,7 @@ model User {
   placementPlanOrders       PlacementPlanOrder[]
   placedStudentProfile      PlacedStudent?
   jobApplications           JobApplication[]
+  submittedJobPostings      JobPosting[] @relation("JobSubmittedBy")
 
   @@map("users")
 }
@@ -835,25 +849,33 @@ model StudentCareerProfile {
 }
 
 model JobPosting {
-  id                   String        @id @default(cuid())
+  id                   String            @id @default(cuid())
   title                String
   company              String
   location             String?
-  applyType            JobApplyType  @map("apply_type")
-  description          String        @db.Text
-  applyEmail           String?       @map("apply_email")
-  applyUrl             String?       @map("apply_url")
-  applyPhone           String?       @map("apply_phone")
-  walkInDetails        String?       @map("walk_in_details") @db.Text
-  requiresSubscription Boolean       @default(true) @map("requires_subscription")
-  status               PublishStatus @default(ACTIVE)
-  sortOrder            Int           @default(0) @map("sort_order")
-  createdAt            DateTime      @default(now()) @map("created_at")
-  updatedAt            DateTime      @updatedAt @map("updated_at")
+  applyType            JobApplyType      @map("apply_type")
+  description          String            @db.Text
+  applyEmail           String?           @map("apply_email")
+  applyUrl             String?           @map("apply_url")
+  applyPhone           String?           @map("apply_phone")
+  walkInDetails        String?           @map("walk_in_details") @db.Text
+  requiresSubscription Boolean           @default(true) @map("requires_subscription")
+  status               PublishStatus     @default(ACTIVE)
+  source               JobPostingSource  @default(ADMIN)
+  reviewStatus         JobReviewStatus   @default(NONE) @map("review_status")
+  adminReviewNote      String?           @map("admin_review_note") @db.Text
+  submittedByUserId    String?           @map("submitted_by_user_id")
+  viewCount            Int               @default(0) @map("view_count")
+  sortOrder            Int               @default(0) @map("sort_order")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
 
+  submittedBy  User?            @relation("JobSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
   applications JobApplication[]
 
   @@index([status, sortOrder])
+  @@index([reviewStatus, source])
+  @@index([submittedByUserId])
   @@map("job_postings")
 }
 

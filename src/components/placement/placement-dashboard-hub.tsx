@@ -36,7 +36,8 @@ export function PlacementDashboardHub() {
           </p>
           <h2 className="mt-2 text-2xl font-bold">Jobs, resume & email apply</h2>
           <p className="mt-2 max-w-xl text-sm text-indigo-100">
-            Browse all job postings, upload your resume, set Gmail app password, and apply with resume attached.
+            Browse jobs, post openings for admin approval, upload resume, set Gmail app password, and apply with resume
+            attached.
           </p>
           {status ? (
             <ul className="mt-4 space-y-1 text-xs text-indigo-100">

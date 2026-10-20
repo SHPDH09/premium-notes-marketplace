@@ -16,8 +16,14 @@ export function serializeJobPosting(job: JobPosting) {
     walkInDetails: job.walkInDetails,
     requiresSubscription: job.requiresSubscription,
     status: job.status,
+    source: job.source,
+    reviewStatus: job.reviewStatus,
+    adminReviewNote: job.adminReviewNote,
+    submittedByUserId: job.submittedByUserId,
+    viewCount: job.viewCount,
     sortOrder: job.sortOrder,
     createdAt: job.createdAt.toISOString(),
+    updatedAt: job.updatedAt.toISOString(),
   };
 }
 

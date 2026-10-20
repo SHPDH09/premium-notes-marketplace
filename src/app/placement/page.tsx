@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { BrandLoading } from "@/components/brand/brand-loading";
 import { JobApplyDialog } from "@/components/placement/job-apply-dialog";
 import { JobShareButton } from "@/components/placement/job-share-button";
+import { JobViewBeacon } from "@/components/placement/job-view-beacon";
 import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
 import { Briefcase, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -190,6 +191,7 @@ function PlacementPageContent() {
           <div className="space-y-4">
             {filteredJobs.map((job) => (
               <Card key={job.id} id={`job-card-${job.id}`} className="scroll-mt-24 transition-shadow">
+                <JobViewBeacon jobId={job.id} />
                 <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-xl">{job.title}</CardTitle>
