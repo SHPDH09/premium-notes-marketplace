@@ -10,10 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BrandLoading } from "@/components/brand/brand-loading";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 export default function ProfilePlacementPage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
   const [profile, setProfile] = useState({
     resumeFileName: "",
     resumeText: "",
@@ -23,11 +26,13 @@ export default function ProfilePlacementPage() {
   const [uploading, setUploading] = useState(false);
 
   async function load() {
-    const [st, pr] = await Promise.all([
+    const [st, pr, jobsPayload] = await Promise.all([
       fetch("/api/student/placement/status", { credentials: "include" }).then((r) => r.json()),
       fetch("/api/student/placement/profile", { credentials: "include" }).then((r) => r.json()),
+      fetch("/api/placement/jobs", { credentials: "include" }).then((r) => r.json()),
     ]);
     setStatus(st);
+    setPlans(jobsPayload.plans ?? []);
     if (pr.profile) {
       setProfile({
         resumeFileName: pr.profile.resumeFileName ?? "",
@@ -37,6 +42,33 @@ export default function ProfilePlacementPage() {
       });
     }
     setLoading(false);
+  }
+
+  async function subscribe(planId: string) {
+    setSubscribing(planId);
+    try {
+      const res = await fetch("/api/placement/checkout", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Checkout failed");
+        return;
+      }
+      if (data.free) {
+        toast.success("Subscription activated!");
+        void load();
+        return;
+      }
+      window.location.href = `/placement/subscribe/pay?session=${encodeURIComponent(
+        data.paymentSessionId
+      )}&order=${encodeURIComponent(data.planOrderId)}`;
+    } finally {
+      setSubscribing(null);
+    }
   }
 
   useEffect(() => {
@@ -139,9 +171,35 @@ export default function ProfilePlacementPage() {
                   : " (lifetime)"}
               </p>
             ) : (
-              <p className="text-amber-800">
-                Not subscribed. Ask admin to activate a placement plan to unlock job listings.
-              </p>
+              <div className="space-y-4">
+                <p className="text-amber-800">Choose a plan to unlock job apply:</p>
+                <ul className="space-y-2">
+                  {plans.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-slate-50 px-4 py-3"
+                    >
+                      <div>
+                        <p className="font-medium text-slate-900">{p.name}</p>
+                        <p className="text-xs text-slate-500">
+                          {p.priceLabel ?? formatCurrency(p.priceAmount ?? 0)}
+                          {p.durationDays ? ` · ${p.durationDays} days` : " · Lifetime"}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        disabled={subscribing === p.id}
+                        onClick={() => void subscribe(p.id)}
+                      >
+                        {subscribing === p.id ? "Please wait…" : p.priceAmount > 0 ? "Pay & subscribe" : "Activate free"}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+                {!plans.length ? (
+                  <p className="text-sm text-slate-500">No plans available yet. Contact admin.</p>
+                ) : null}
+              </div>
             )}
           </CardContent>
         </Card>

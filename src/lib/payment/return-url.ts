@@ -10,3 +10,10 @@ export function digitalCheckoutReturnUrl(baseUrl: string, orderId: string): stri
   const origin = baseUrl.replace(/\/$/, "");
   return `${origin}/checkout/success?app_order_id=${encodeURIComponent(orderId)}&order_id={order_id}`;
 }
+
+export function placementSubscribeReturnUrl(baseUrl: string, planOrderId: string): string {
+  const origin = baseUrl.replace(/\/$/, "");
+  return `${origin}/placement/subscribe/success?plan_order_id=${encodeURIComponent(
+    planOrderId
+  )}&order_id={order_id}`;
+}

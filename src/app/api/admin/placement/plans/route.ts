@@ -17,6 +17,7 @@ export async function GET() {
 const createSchema = z.object({
   name: z.string().min(2),
   description: z.string().nullable().optional(),
+  priceAmount: z.number().min(0).optional(),
   priceLabel: z.string().nullable().optional(),
   durationDays: z.number().int().positive().nullable().optional(),
   status: z.nativeEnum(PublishStatus).optional(),
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: d.name,
         description: d.description ?? null,
+        priceAmount: d.priceAmount ?? 0,
         priceLabel: d.priceLabel ?? null,
         durationDays: d.durationDays ?? null,
         status: d.status ?? "ACTIVE",

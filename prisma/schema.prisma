@@ -184,6 +184,7 @@ model User {
   physicalOrders            PhysicalOrder[]
   careerProfile             StudentCareerProfile?
   placementSubscriptions    UserPlacementSubscription[]
+  placementPlanOrders       PlacementPlanOrder[]
   placedStudentProfile      PlacedStudent?
 
   @@map("users")
@@ -743,6 +744,7 @@ model PlacementSubscriptionPlan {
   id           String        @id @default(cuid())
   name         String
   description  String?       @db.Text
+  priceAmount  Decimal       @default(0) @map("price_amount") @db.Decimal(10, 2)
   priceLabel   String?       @map("price_label")
   durationDays Int?          @map("duration_days")
   status       PublishStatus @default(ACTIVE)
@@ -751,8 +753,26 @@ model PlacementSubscriptionPlan {
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
   subscriptions UserPlacementSubscription[]
+  planOrders    PlacementPlanOrder[]
 
   @@map("placement_subscription_plans")
+}
+
+model PlacementPlanOrder {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  planId          String        @map("plan_id")
+  amount          Decimal       @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  cashfreeOrderId String?       @unique @map("cashfree_order_id")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan PlacementSubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@map("placement_plan_orders")
 }
 
 model UserPlacementSubscription {

@@ -30,6 +30,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  const placementPlanOrder = await prisma.placementPlanOrder.findUnique({
+    where: { cashfreeOrderId: orderId },
+  });
+  if (placementPlanOrder) {
+    const { fulfillSuccessfulPlacementPlanOrder } = await import("@/lib/placement/fulfill-plan-order");
+    if (status === "PAID" || status === "SUCCESS") {
+      await fulfillSuccessfulPlacementPlanOrder(placementPlanOrder.id, orderId);
+    } else if (status === "FAILED") {
+      await prisma.placementPlanOrder.update({
+        where: { id: placementPlanOrder.id },
+        data: { paymentStatus: "FAILED" },
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const physicalOrder = await prisma.physicalOrder.findUnique({ where: { cashfreeOrderId: orderId } });
   if (!physicalOrder) return NextResponse.json({ ok: true });
 

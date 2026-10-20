@@ -1,5 +1,6 @@
 import type { JobPosting, PlacementSubscriptionPlan, PlacedStudent } from "@prisma/client";
 import { getPublicCoverUrl } from "@/lib/storage";
+import { decimalToNumber } from "@/lib/utils";
 
 export function serializeJobPosting(job: JobPosting) {
   return {
@@ -20,14 +21,17 @@ export function serializeJobPosting(job: JobPosting) {
 }
 
 export function serializePlacementPlan(plan: PlacementSubscriptionPlan) {
+  const priceAmount = decimalToNumber(plan.priceAmount);
   return {
     id: plan.id,
     name: plan.name,
     description: plan.description,
-    priceLabel: plan.priceLabel,
+    priceAmount,
+    priceLabel: plan.priceLabel ?? (priceAmount > 0 ? `₹${priceAmount}` : "Free"),
     durationDays: plan.durationDays,
     status: plan.status,
     sortOrder: plan.sortOrder,
+    createdAt: plan.createdAt.toISOString(),
   };
 }
 
