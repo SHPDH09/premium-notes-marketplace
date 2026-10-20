@@ -188,9 +188,17 @@ export default function PlacementPage() {
               </p>
               <ul className="space-y-2">
                 {plans.map((p) => (
-                  <li key={p.id} className="rounded-lg border bg-white px-4 py-3 text-sm">
-                    <span className="font-semibold text-slate-900">{p.name}</span>
-                    {p.priceLabel ? <span className="text-slate-500"> — {p.priceLabel}</span> : null}
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-white px-4 py-3 text-sm"
+                  >
+                    <span>
+                      <span className="font-semibold text-slate-900">{p.name}</span>
+                      {p.priceLabel ? <span className="text-slate-500"> — {p.priceLabel}</span> : null}
+                    </span>
+                    <Button size="sm" variant="outline" asChild>
+                      <Link href="/profile/placement">Subscribe</Link>
+                    </Button>
                   </li>
                 ))}
               </ul>
