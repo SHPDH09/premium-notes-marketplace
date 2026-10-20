@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { brand } from "@/config/brand";
-
-const logoPath = "/brand/techlaunchpad-logo.png";
+import { brandShareImage } from "@/lib/placement/share-metadata";
 
 export function siteMetadata(overrides?: Metadata): Metadata {
+  const shareImage = brandShareImage();
+
   return {
     metadataBase: new URL(brand.website),
     title: {
@@ -12,9 +13,9 @@ export function siteMetadata(overrides?: Metadata): Metadata {
     },
     description: brand.tagline,
     icons: {
-      icon: [{ url: logoPath, type: "image/png" }],
-      shortcut: [logoPath],
-      apple: [{ url: logoPath, type: "image/png" }],
+      icon: [{ url: "/icon", type: "image/png" }],
+      shortcut: [{ url: "/icon", type: "image/png" }],
+      apple: [{ url: "/apple-icon", type: "image/png" }],
     },
     openGraph: {
       type: "website",
@@ -24,14 +25,9 @@ export function siteMetadata(overrides?: Metadata): Metadata {
       description: brand.tagline,
       url: brand.website,
       images: [
+        shareImage,
         {
           url: "/opengraph-image",
-          width: 1200,
-          height: 630,
-          alt: `${brand.name} logo`,
-        },
-        {
-          url: logoPath,
           width: 1200,
           height: 630,
           alt: `${brand.name} logo`,
@@ -42,7 +38,7 @@ export function siteMetadata(overrides?: Metadata): Metadata {
       card: "summary_large_image",
       title: brand.name,
       description: brand.tagline,
-      images: [logoPath],
+      images: [shareImage.url],
     },
     ...overrides,
   };
