@@ -20,6 +20,13 @@ export function serializeJobPosting(job: JobPosting) {
   };
 }
 
+/** Public job board — no recruiter email in API or share payloads. */
+export function serializeJobPostingPublic(job: JobPosting) {
+  const full = serializeJobPosting(job);
+  const { applyEmail: _removed, ...rest } = full;
+  return rest;
+}
+
 export function serializePlacementPlan(plan: PlacementSubscriptionPlan) {
   const priceAmount = decimalToNumber(plan.priceAmount);
   return {

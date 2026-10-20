@@ -13,4 +13,9 @@ export const brand = {
     "https://www.techlaunchpad.in"
   ).replace(/\/$/, ""),
   placeOfSupply: process.env.NEXT_PUBLIC_PLACE_OF_SUPPLY ?? "India",
+  /** Shown in WhatsApp job-share messages (channel invite). */
+  whatsappChannelUrl: (
+    process.env.NEXT_PUBLIC_WHATSAPP_CHANNEL_URL ??
+    "https://whatsapp.com/channel/0029Vb8XYSRC1FuCSJXgwb21"
+  ).replace(/\/$/, ""),
 } as const;

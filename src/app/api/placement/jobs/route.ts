@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
-import { serializeJobPosting, serializePlacementPlan } from "@/lib/placement/serialize";
+import { serializeJobPostingPublic, serializePlacementPlan } from "@/lib/placement/serialize";
 import { userHasActivePlacementSubscription } from "@/lib/placement/subscription";
 
 export async function GET() {
@@ -33,7 +33,7 @@ export async function GET() {
   }
 
   const serializedJobs = jobs.map((job) => ({
-    ...serializeJobPosting(job),
+    ...serializeJobPostingPublic(job),
     appliedAt: applicationMap.get(job.id) ?? null,
   }));
 
