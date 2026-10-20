@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildMailtoUrl } from "@/lib/placement/mailto";
 import { formatAppliedAt } from "@/lib/placement/format-applied-at";
+import Link from "next/link";
 import { ExternalLink, Mail, MapPin, X } from "lucide-react";
 
 type Job = {
@@ -234,8 +235,8 @@ export function JobApplyDialog({
             ) : (
               <>
                 <p className="text-xs text-slate-500">
-                  Recommended: <strong>Send from my Gmail</strong> — resume PDF is attached automatically. The
-                  email app option cannot attach files; you must add the PDF yourself.
+                  <strong>Send from my Gmail</strong> attaches your resume automatically.{" "}
+                  <strong>Open email app</strong> fills the message — download the PDF and attach it yourself.
                 </p>
                 <div className="rounded-lg border bg-white p-3 text-sm">
                   <p className="font-medium text-slate-900">To: {emailDraft.to}</p>
@@ -251,8 +252,11 @@ export function JobApplyDialog({
                     </Button>
                   ) : (
                     <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                      Set up Gmail + app password on Dashboard → Placement email setup to send with resume
-                      attached in one tap.
+                      For one-tap send with resume attached, set up Gmail on your{" "}
+                      <Link href="/dashboard" className="font-medium text-indigo-700 underline">
+                        Dashboard → Placement email setup
+                      </Link>{" "}
+                      (includes link to create Google App Password).
                     </p>
                   )}
                   {emailDraft.hasResumeFile ? (
@@ -264,11 +268,9 @@ export function JobApplyDialog({
                       Upload a resume under Profile → Placement before sending.
                     </p>
                   )}
-                  {!emailConfigured && !emailDraft.emailConfigured ? (
-                    <Button type="button" variant="outline" onClick={() => void openMailApp()}>
-                      Open phone email app (attach PDF manually)
-                    </Button>
-                  ) : null}
+                  <Button type="button" variant="outline" onClick={() => void openMailApp()}>
+                    Open email app (attach PDF manually)
+                  </Button>
                 </div>
               </>
             )}
