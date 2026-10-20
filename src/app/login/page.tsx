@@ -22,15 +22,22 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
+    const email = String(form.get("email")).toLowerCase().trim();
     const res = await signIn("credentials", {
-      email: String(form.get("email")),
+      email,
       password: String(form.get("password")),
       admin: "false",
       redirect: false,
     });
     setLoading(false);
     if (res?.error) {
-      toast.error("Invalid credentials");
+      toast.error(
+        "Login failed. Check email/password. Admin accounts must use Admin Login. If this persists, contact support."
+      );
+      return;
+    }
+    if (!res?.ok) {
+      toast.error("Login failed. Please try again.");
       return;
     }
     toast.success("Welcome back!");

@@ -24,7 +24,7 @@ function RegisterForm() {
     const form = new FormData(e.currentTarget);
     const payload = {
       name: String(form.get("name")),
-      email: String(form.get("email")),
+      email: String(form.get("email")).toLowerCase().trim(),
       phone: String(form.get("phone") || ""),
       password: String(form.get("password")),
     };
