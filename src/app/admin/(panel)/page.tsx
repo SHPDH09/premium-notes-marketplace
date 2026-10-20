@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import {
   BarChart,
   Bar,
@@ -21,7 +22,7 @@ export default function AdminDashboardPage() {
       .then(setData);
   }, []);
 
-  if (!data) return <p className="text-slate-500">Loading dashboard...</p>;
+  if (!data) return <BrandLoading fullPage message="Loading dashboard…" />;
 
   const stats = [
     { label: "Total Students", value: data.stats.totalStudents },

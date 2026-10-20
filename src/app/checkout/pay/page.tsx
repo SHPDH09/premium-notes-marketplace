@@ -6,6 +6,7 @@ import { PublicNavbar } from "@/components/layout/public-navbar";
 import { BrandLogo } from "@/components/brand/logo";
 import { toast } from "sonner";
 import { brand } from "@/config/brand";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 declare global {
   interface Window {
@@ -77,7 +78,7 @@ export default function CheckoutPayPage() {
   return (
     <div>
       <PublicNavbar />
-      <Suspense fallback={<p className="py-20 text-center">Loading checkout...</p>}>
+      <Suspense fallback={<BrandLoading fullPage message="Loading checkout…" />}>
         <PayContent />
       </Suspense>
     </div>

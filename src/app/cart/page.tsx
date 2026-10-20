@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { readJsonResponse } from "@/lib/api/fetch-json";
 import { LegalAcceptance } from "@/components/legal/legal-acceptance";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function CartPage() {
   const [cart, setCart] = useState<any>(null);
@@ -97,7 +98,7 @@ export default function CartPage() {
         <div className="lg:col-span-2 space-y-4">
           <h1 className="text-2xl font-bold">Shopping Cart</h1>
           {loading ? (
-            <p className="text-slate-500">Loading cart...</p>
+            <BrandLoading fullPage message="Loading cart…" />
           ) : !cart?.items?.length ? (
             <Card>
               <CardContent className="py-10 text-center text-slate-500">Your cart is empty.</CardContent>

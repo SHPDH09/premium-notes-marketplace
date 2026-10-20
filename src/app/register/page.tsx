@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 
@@ -93,7 +94,7 @@ export default function RegisterPage() {
     <div>
       <PublicNavbar />
       <div className="mx-auto flex max-w-md px-4 py-16">
-        <Suspense fallback={<Card className="w-full p-8 text-center text-slate-500">Loading...</Card>}>
+        <Suspense fallback={<BrandLoading fullPage className="w-full" message="Loading…" />}>
           <RegisterForm />
         </Suspense>
       </div>

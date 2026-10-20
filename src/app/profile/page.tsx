@@ -7,15 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>({});
+  const [loading, setLoading] = useState(true);
   const [pwd, setPwd] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
 
   useEffect(() => {
     fetch("/api/student/profile")
       .then((r) => r.json())
-      .then((d) => setProfile(d.user ?? {}));
+      .then((d) => setProfile(d.user ?? {}))
+      .finally(() => setLoading(false));
   }, []);
 
   async function saveProfile(e: React.FormEvent) {
@@ -48,6 +51,9 @@ export default function ProfilePage() {
 
   return (
     <StudentShell>
+      {loading ? (
+        <BrandLoading fullPage message="Loading profile…" />
+      ) : (
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -116,6 +122,7 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+      )}
     </StudentShell>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { NoteForm } from "@/components/admin/note-form";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function EditNotePage() {
   const { id } = useParams<{ id: string }>();
@@ -14,7 +15,7 @@ export default function EditNotePage() {
       .then((d) => setNote(d.note));
   }, [id]);
 
-  if (!note) return <p>Loading...</p>;
+  if (!note) return <BrandLoading fullPage message="Loading note…" />;
 
   return (
     <div className="space-y-4">

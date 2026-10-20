@@ -71,6 +71,79 @@ enum PopupRepeatMode {
   ONCE_PER_BROWSER
 }
 
+enum CouponAppliesTo {
+  NOTE
+  PHYSICAL
+  BOTH
+}
+
+enum PaperSize {
+  A4
+  A5
+  OTHER
+}
+
+enum PaperType {
+  NORMAL
+  PREMIUM
+}
+
+enum PrintType {
+  BLACK_WHITE
+  COLOR
+}
+
+enum BindingType {
+  NONE
+  SPIRAL
+  SOFT_BINDING
+  HARD_BINDING
+}
+
+enum PhysicalFulfillmentStatus {
+  ORDER_PLACED
+  PAYMENT_CONFIRMED
+  PROCESSING
+  PRINTING
+  QUALITY_CHECK
+  PACKED
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PhysicalPrintStatus {
+  PENDING_PRINT
+  PRINTING
+  PRINTED
+  QC_PENDING
+  QC_PASSED
+  QC_FAILED
+  REPRINT_REQUIRED
+}
+
+enum PhysicalShippingStatus {
+  NOT_SHIPPED
+  READY_FOR_PACKING
+  PACKED
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  DELIVERY_FAILED
+  RETURNED
+}
+
+enum PhysicalRefundStatus {
+  NOT_REQUESTED
+  REQUESTED
+  APPROVED
+  PROCESSING
+  REFUNDED
+  REJECTED
+}
+
 model User {
   id            String     @id @default(cuid())
   name          String
@@ -79,8 +152,9 @@ model User {
   passwordHash  String     @map("password_hash")
   role          Role       @default(STUDENT)
   profileImage  String?    @map("profile_image")
-  status        UserStatus @default(ACTIVE)
-  createdAt     DateTime   @default(now()) @map("created_at")
+  status          UserStatus @default(ACTIVE)
+  sessionVersion  Int        @default(0) @map("session_version")
+  createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
   cartItems          CartItem[]
@@ -88,9 +162,14 @@ model User {
   orders             Order[]
   transactions       Transaction[]
   purchases          Purchase[]
-  couponRedemptions  CouponRedemption[]
-  adminProfile       AdminProfile?
-  studentSpotlight   StudentSpotlight?
+  couponRedemptions         CouponRedemption[]
+  physicalCouponRedemptions PhysicalCouponRedemption[]
+  adminProfile              AdminProfile?
+  studentSpotlight          StudentSpotlight?
+  addresses                 UserAddress[]
+  physicalCartItems         PhysicalCartItem[]
+  physicalCartMeta          PhysicalCartMeta?
+  physicalOrders            PhysicalOrder[]
 
   @@map("users")
 }
@@ -128,7 +207,8 @@ model Note {
   cartItems    CartItem[]
   orderItems   OrderItem[]
   purchases    Purchase[]
-  couponNotes  CouponNote[]
+  couponNotes         CouponNote[]
+  physicalDocuments   PhysicalDocument[]
 
   @@index([status])
   @@index([createdAt])
@@ -147,12 +227,16 @@ model Coupon {
   minPurchaseAmount   Decimal        @default(0) @map("min_purchase_amount") @db.Decimal(10, 2)
   maxDiscount         Decimal?       @map("max_discount") @db.Decimal(10, 2)
   status              CouponStatus   @default(ACTIVE)
+  appliesTo           CouponAppliesTo @default(NOTE) @map("applies_to")
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")
 
-  couponNotes    CouponNote[]
-  orders         Order[]
-  redemptions    CouponRedemption[]
+  couponNotes              CouponNote[]
+  couponPhysicalDocuments  CouponPhysicalDocument[]
+  orders                   Order[]
+  redemptions              CouponRedemption[]
+  physicalOrders           PhysicalOrder[]
+  physicalRedemptions      PhysicalCouponRedemption[]
 
   @@map("coupons")
 }
@@ -165,6 +249,16 @@ model CouponNote {
 
   @@id([couponId, noteId])
   @@map("coupon_notes")
+}
+
+model CouponPhysicalDocument {
+  couponId            String @map("coupon_id")
+  physicalDocumentId  String @map("physical_document_id")
+  coupon              Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  physicalDocument    PhysicalDocument @relation(fields: [physicalDocumentId], references: [id], onDelete: Cascade)
+
+  @@id([couponId, physicalDocumentId])
+  @@map("coupon_physical_documents")
 }
 
 model CouponRedemption {
@@ -352,4 +446,295 @@ model StudentSpotlight {
 
   @@index([status, sortOrder])
   @@map("student_spotlights")
+}
+
+model ShippingSettings {
+  id                    String   @id @default("default")
+  deliveryCharge        Decimal  @default(50) @map("delivery_charge") @db.Decimal(10, 2)
+  freeDeliveryThreshold Decimal? @map("free_delivery_threshold") @db.Decimal(10, 2)
+  processingDays        Int      @default(2) @map("processing_days")
+  shippingDays          Int      @default(3) @map("shipping_days")
+  shippingEnabled       Boolean  @default(true) @map("shipping_enabled")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("shipping_settings")
+}
+
+model PhysicalDocument {
+  id               String        @id @default(cuid())
+  sourceNoteId     String?       @map("source_note_id")
+  name             String
+  title            String
+  description      String        @db.Text
+  coverStorageKey  String?       @map("cover_storage_key")
+  sourcePdfKey     String?       @map("source_pdf_key")
+  pageCount        Int?          @map("page_count")
+  paperSize        PaperSize     @default(A4) @map("paper_size")
+  paperType        PaperType     @default(NORMAL) @map("paper_type")
+  printType        PrintType     @default(BLACK_WHITE) @map("print_type")
+  bindingType      BindingType   @default(NONE) @map("binding_type")
+  printingCost     Decimal       @default(0) @map("printing_cost") @db.Decimal(10, 2)
+  bindingCost      Decimal       @default(0) @map("binding_cost") @db.Decimal(10, 2)
+  packagingCost    Decimal       @default(0) @map("packaging_cost") @db.Decimal(10, 2)
+  basePrice        Decimal       @default(0) @map("base_price") @db.Decimal(10, 2)
+  finalPrice       Decimal       @map("final_price") @db.Decimal(10, 2)
+  priceOverride    Boolean       @default(false) @map("price_override")
+  minQuantity      Int           @default(1) @map("min_quantity")
+  maxQuantity      Int           @default(10) @map("max_quantity")
+  processingDays   Int           @default(2) @map("processing_days")
+  status           PublishStatus @default(ACTIVE)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  sourceNote      Note?                    @relation(fields: [sourceNoteId], references: [id], onDelete: SetNull)
+  cartItems       PhysicalCartItem[]
+  orderItems      PhysicalOrderItem[]
+  couponDocuments CouponPhysicalDocument[]
+
+  @@index([status])
+  @@map("physical_documents")
+}
+
+model PhysicalCartMeta {
+  userId     String  @id @map("user_id")
+  couponCode String? @map("coupon_code")
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("physical_cart_meta")
+}
+
+model PhysicalCartItem {
+  id                 String      @id @default(cuid())
+  userId             String      @map("user_id")
+  physicalDocumentId String      @map("physical_document_id")
+  quantity           Int         @default(1)
+  printType          PrintType   @map("print_type")
+  paperType          PaperType   @map("paper_type")
+  bindingType        BindingType @map("binding_type")
+  unitPrice          Decimal     @map("unit_price") @db.Decimal(10, 2)
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  physicalDocument PhysicalDocument @relation(fields: [physicalDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, physicalDocumentId, printType, paperType, bindingType])
+  @@map("physical_cart_items")
+}
+
+model UserAddress {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  fullName     String   @map("full_name")
+  phone        String
+  addressLine1 String   @map("address_line_1")
+  addressLine2 String?  @map("address_line_2")
+  landmark     String?
+  city         String
+  state        String
+  pincode      String
+  country      String   @default("India")
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_addresses")
+}
+
+model PhysicalOrder {
+  id                 String                    @id @default(cuid())
+  orderNumber        String                    @unique @map("order_number")
+  userId             String                    @map("user_id")
+  subtotal           Decimal                   @db.Decimal(10, 2)
+  discountAmount     Decimal                   @default(0) @map("discount_amount") @db.Decimal(10, 2)
+  couponDiscount     Decimal                   @default(0) @map("coupon_discount") @db.Decimal(10, 2)
+  deliveryCharge     Decimal                   @default(0) @map("delivery_charge") @db.Decimal(10, 2)
+  totalAmount        Decimal                   @map("total_amount") @db.Decimal(10, 2)
+  couponId           String?                   @map("coupon_id")
+  paymentStatus      PaymentStatus             @default(PENDING) @map("payment_status")
+  fulfillmentStatus  PhysicalFulfillmentStatus @default(ORDER_PLACED) @map("fulfillment_status")
+  printStatus        PhysicalPrintStatus       @default(PENDING_PRINT) @map("print_status")
+  shippingStatus     PhysicalShippingStatus    @default(NOT_SHIPPED) @map("shipping_status")
+  refundStatus       PhysicalRefundStatus      @default(NOT_REQUESTED) @map("refund_status")
+  cashfreeOrderId    String?                   @unique @map("cashfree_order_id")
+  paymentTxnId       String?                   @map("payment_txn_id")
+  idempotencyKey     String?                   @unique @map("idempotency_key")
+  expectedDelivery   DateTime?                 @map("expected_delivery")
+  courierName        String?                   @map("courier_name")
+  trackingNumber     String?                   @map("tracking_number")
+  trackingUrl        String?                   @map("tracking_url")
+  shippingDate       DateTime?                 @map("shipping_date")
+  deliveredAt        DateTime?                 @map("delivered_at")
+  packageWeight      String?                   @map("package_weight")
+  packageDimensions  String?                   @map("package_dimensions")
+  packageCount       Int?                      @map("package_count")
+  packagingNotes     String?                   @map("packaging_notes") @db.Text
+  qcFailureReason    String?                   @map("qc_failure_reason") @db.Text
+  cancelReason       String?                   @map("cancel_reason") @db.Text
+  studentNameSnap    String                    @map("student_name_snap")
+  studentEmailSnap   String                    @map("student_email_snap")
+  studentPhoneSnap   String?                   @map("student_phone_snap")
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  user        User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon      Coupon?                      @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items       PhysicalOrderItem[]
+  address     PhysicalOrderAddress?
+  history     PhysicalOrderStatusHistory[]
+  printingJob PrintingJob?
+  shipment    Shipment?
+  refunds     PhysicalOrderRefund[]
+  redemption  PhysicalCouponRedemption?
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([fulfillmentStatus])
+  @@index([paymentStatus])
+  @@map("physical_orders")
+}
+
+model PhysicalOrderItem {
+  id                 String      @id @default(cuid())
+  orderId            String      @map("order_id")
+  physicalDocumentId String?     @map("physical_document_id")
+  documentNameSnap   String      @map("document_name_snap")
+  documentTitleSnap  String      @map("document_title_snap")
+  quantity           Int
+  pageCountSnap      Int?          @map("page_count_snap")
+  printType          PrintType     @map("print_type")
+  paperType          PaperType     @map("paper_type")
+  bindingType        BindingType   @map("binding_type")
+  unitPrice          Decimal       @map("unit_price") @db.Decimal(10, 2)
+  totalPrice         Decimal       @map("total_price") @db.Decimal(10, 2)
+  createdAt          DateTime      @default(now()) @map("created_at")
+
+  order            PhysicalOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  physicalDocument PhysicalDocument? @relation(fields: [physicalDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@map("physical_order_items")
+}
+
+model PhysicalOrderAddress {
+  id           String   @id @default(cuid())
+  orderId      String   @unique @map("order_id")
+  fullName     String   @map("full_name")
+  phone        String
+  altPhone     String?  @map("alt_phone")
+  addressLine1 String   @map("address_line_1")
+  addressLine2 String?  @map("address_line_2")
+  landmark     String?
+  city         String
+  state        String
+  pincode      String
+  country      String   @default("India")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  order PhysicalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("physical_order_addresses")
+}
+
+model PhysicalOrderStatusHistory {
+  id        String   @id @default(cuid())
+  orderId   String   @map("order_id")
+  status    String
+  note      String?  @db.Text
+  changedBy String?  @map("changed_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order PhysicalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("physical_order_status_history")
+}
+
+model PrintingJob {
+  id               String              @id @default(cuid())
+  orderId          String              @unique @map("order_id")
+  status           PhysicalPrintStatus @default(PENDING_PRINT)
+  priority         Int                 @default(0)
+  printStartedAt   DateTime?           @map("print_started_at")
+  printCompletedAt DateTime?           @map("print_completed_at")
+  qcStatus         String?             @map("qc_status")
+  qcReason         String?             @map("qc_reason") @db.Text
+  printedBy        String?             @map("printed_by")
+  qcBy             String?             @map("qc_by")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  updatedAt        DateTime            @updatedAt @map("updated_at")
+
+  order PhysicalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("printing_jobs")
+}
+
+model Shipment {
+  id                    String                 @id @default(cuid())
+  orderId               String                 @unique @map("order_id")
+  courierName           String?                @map("courier_name")
+  trackingNumber        String?                @map("tracking_number")
+  trackingUrl           String?                @map("tracking_url")
+  shippingDate          DateTime?              @map("shipping_date")
+  expectedDeliveryDate  DateTime?              @map("expected_delivery_date")
+  deliveredAt           DateTime?              @map("delivered_at")
+  shippingStatus        PhysicalShippingStatus @default(NOT_SHIPPED) @map("shipping_status")
+  notes                 String?                @db.Text
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+
+  order PhysicalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("shipments")
+}
+
+model PhysicalOrderRefund {
+  id              String               @id @default(cuid())
+  orderId         String               @map("order_id")
+  refundAmount    Decimal              @map("refund_amount") @db.Decimal(10, 2)
+  reason          String               @db.Text
+  status          PhysicalRefundStatus @default(REQUESTED)
+  paymentRefundId String?              @map("payment_refund_id")
+  requestedBy     String?              @map("requested_by")
+  approvedBy      String?              @map("approved_by")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  order PhysicalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("physical_order_refunds")
+}
+
+model PhysicalCouponRedemption {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  couponId  String   @map("coupon_id")
+  orderId   String   @unique @map("order_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon       @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  order PhysicalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, couponId])
+  @@map("physical_coupon_redemptions")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String   @map("admin_id")
+  action     String
+  entity     String
+  entityId   String   @map("entity_id")
+  oldValue   String?  @map("old_value") @db.Text
+  newValue   String?  @map("new_value") @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
 }

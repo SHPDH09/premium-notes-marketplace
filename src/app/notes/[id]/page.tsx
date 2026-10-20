@@ -10,13 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BrandLoading } from "@/components/brand/brand-loading";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { refundPolicyPaymentBullet } from "@/lib/refund-policy";
+import { NotePreviewPanel } from "@/components/notes/note-preview-panel";
 
 export default function NoteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [note, setNote] = useState<any>(null);
+  const [physicalDocument, setPhysicalDocument] = useState<{ id: string; finalPrice: number } | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
   const router = useRouter();
@@ -24,7 +28,10 @@ export default function NoteDetailPage() {
   useEffect(() => {
     fetch(`/api/notes/${id}`)
       .then((r) => r.json())
-      .then((d) => setNote(d.note))
+      .then((d) => {
+        setNote(d.note);
+        setPhysicalDocument(d.physicalDocument ?? null);
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -44,18 +51,15 @@ export default function NoteDetailPage() {
     toast.success("Added to cart");
   }
 
-  async function openNotes() {
-    const res = await fetch(`/api/purchases/${id}/access`);
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error ?? "Access denied");
-    window.open(data.url, "_blank");
+  function openNotes() {
+    router.push(`/purchases/${id}/view`);
   }
 
   if (loading) {
     return (
       <div>
         <PublicNavbar />
-        <Skeleton className="mx-auto mt-10 h-96 max-w-5xl" />
+        <BrandLoading fullPage size="lg" message="Loading note…" />
       </div>
     );
   }
@@ -92,11 +96,22 @@ export default function NoteDetailPage() {
               <span className="text-lg text-slate-400 line-through">{formatCurrency(note.price)}</span>
             )}
           </div>
+          {physicalDocument && (
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+              <p className="font-semibold text-indigo-900">Available as physical copy</p>
+              <p className="mt-1 text-sm text-indigo-800">
+                Printed &amp; delivered from {formatCurrency(physicalDocument.finalPrice)} per copy
+              </p>
+              <Button className="mt-3" variant="secondary" size="sm" asChild>
+                <Link href={`/physical-documents/${physicalDocument.id}`}>Order printed copy</Link>
+              </Button>
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             {note.owned ? (
               <>
                 <Badge variant="success">Already Purchased</Badge>
-                <Button onClick={openNotes}>Open Notes</Button>
+                <Button onClick={openNotes}>Open protected viewer</Button>
                 <Button variant="secondary" asChild>
                   <Link href="/purchases">My Purchased Notes</Link>
                 </Button>
@@ -113,8 +128,25 @@ export default function NoteDetailPage() {
               </>
             )}
           </div>
+
+          {(note.previewAvailable || note.hasPdf) && (
+            <div className="lg:hidden">
+              <h2 className="mb-3 text-lg font-semibold text-slate-900">Free preview</h2>
+              <NotePreviewPanel noteId={id} compact />
+            </div>
+          )}
         </div>
       </div>
+
+      {(note.previewAvailable || note.hasPdf) && (
+        <section className="mx-auto max-w-6xl px-4 pb-12">
+          <h2 className="mb-4 hidden text-xl font-bold text-slate-900 lg:block">Notes preview</h2>
+          <div className="hidden lg:block">
+            <NotePreviewPanel noteId={id} />
+          </div>
+        </section>
+      )}
+
       <SiteFooter />
     </div>
   );

@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { rotateUserSession } from "@/lib/session-control";
 
 if (!process.env.NEXTAUTH_URL) {
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -19,11 +20,13 @@ declare module "next-auth" {
       name: string;
       role: "STUDENT" | "ADMIN";
       status: "ACTIVE" | "DISABLED";
+      sessionVersion: number;
     };
   }
   interface User {
     role: "STUDENT" | "ADMIN";
     status: "ACTIVE" | "DISABLED";
+    sessionVersion: number;
   }
 }
 
@@ -32,6 +35,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: "STUDENT" | "ADMIN";
     status: "ACTIVE" | "DISABLED";
+    sessionVersion: number;
   }
 }
 
@@ -68,12 +72,15 @@ export const authOptions: NextAuthOptions = {
 
         if (user.status === "DISABLED") return null;
 
+        const sessionVersion = await rotateUserSession(user.id);
+
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           status: user.status,
+          sessionVersion,
         };
       },
     }),
@@ -84,6 +91,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.status = user.status;
+        token.sessionVersion = user.sessionVersion;
       }
       return token;
     },
@@ -92,6 +100,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.status = token.status;
+        session.user.sessionVersion = token.sessionVersion ?? 0;
       }
       return session;
     },

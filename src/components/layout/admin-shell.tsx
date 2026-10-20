@@ -16,6 +16,10 @@ import {
   Handshake,
   Home,
   Megaphone,
+  Package,
+  Truck,
+  Printer,
+  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -28,6 +32,10 @@ const nav = [
   { href: "/admin/collaborators", label: "Collaborations", icon: Handshake },
   { href: "/admin/homepage", label: "Homepage", icon: Home },
   { href: "/admin/popups", label: "Popups", icon: Megaphone },
+  { href: "/admin/physical-documents", label: "Physical Docs", icon: Package },
+  { href: "/admin/physical-orders", label: "Physical Orders", icon: Truck },
+  { href: "/admin/printing-queue", label: "Printing Queue", icon: Printer },
+  { href: "/admin/settings/shipping", label: "Shipping", icon: Settings },
   { href: "/admin/transactions", label: "Transactions", icon: Receipt },
   { href: "/admin/profile", label: "Profile", icon: User },
   { href: "/admin/settings/password", label: "Password", icon: KeyRound },

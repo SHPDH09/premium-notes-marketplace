@@ -7,10 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { NotePicker } from "@/components/admin/note-picker";
+import { PhysicalDocumentPicker } from "@/components/admin/physical-document-picker";
+
+const APPLIES_LABEL: Record<string, string> = {
+  NOTE: "Digital notes",
+  PHYSICAL: "Physical print",
+  BOTH: "Digital + physical",
+};
 
 export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
+  const [physicalDocs, setPhysicalDocs] = useState<{ id: string; title: string }[]>([]);
   const [form, setForm] = useState<any>({
     code: "",
     discountType: "PERCENTAGE",
@@ -20,16 +28,22 @@ export default function AdminCouponsPage() {
     validUntil: "",
     minPurchaseAmount: 0,
     maxDiscount: "",
+    appliesTo: "BOTH",
     noteIds: [] as string[],
+    physicalDocumentIds: [] as string[],
   });
 
   async function load() {
-    const [c, n] = await Promise.all([
+    const [c, n, p] = await Promise.all([
       fetch("/api/admin/coupons").then((r) => r.json()),
       fetch("/api/admin/notes").then((r) => r.json()),
+      fetch("/api/admin/physical-documents").then((r) => r.json()),
     ]);
     setCoupons(c.coupons ?? []);
     setNotes(n.notes ?? []);
+    setPhysicalDocs(
+      (p.documents ?? []).map((d: { id: string; title: string }) => ({ id: d.id, title: d.title }))
+    );
   }
 
   useEffect(() => {
@@ -108,6 +122,18 @@ export default function AdminCouponsPage() {
           <Label>Valid Until</Label>
           <Input type="datetime-local" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} required />
         </div>
+        <div>
+          <Label>Applies to</Label>
+          <select
+            className="h-11 w-full rounded-xl border px-3 text-sm"
+            value={form.appliesTo}
+            onChange={(e) => setForm({ ...form, appliesTo: e.target.value })}
+          >
+            <option value="BOTH">Digital notes + physical print</option>
+            <option value="NOTE">Digital notes only</option>
+            <option value="PHYSICAL">Physical print only</option>
+          </select>
+        </div>
         <div className="relative md:col-span-3">
           <Label>Applicable Notes (leave empty for all)</Label>
           <div className="mt-2">
@@ -119,6 +145,18 @@ export default function AdminCouponsPage() {
             />
           </div>
         </div>
+        {(form.appliesTo === "PHYSICAL" || form.appliesTo === "BOTH") && (
+          <div className="relative md:col-span-3">
+            <Label>Applicable physical documents (leave empty for all)</Label>
+            <div className="mt-2">
+              <PhysicalDocumentPicker
+                documents={physicalDocs}
+                value={form.physicalDocumentIds}
+                onChange={(physicalDocumentIds) => setForm({ ...form, physicalDocumentIds })}
+              />
+            </div>
+          </div>
+        )}
         <Button type="submit">Create Coupon</Button>
       </form>
 
@@ -128,6 +166,7 @@ export default function AdminCouponsPage() {
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-4 py-3 text-left">Code</th>
+                <th className="px-4 py-3 text-left">Applies to</th>
                 <th className="px-4 py-3 text-left">Usage</th>
                 <th className="px-4 py-3 text-left">Valid Until</th>
                 <th className="px-4 py-3 text-left">Status</th>
@@ -138,6 +177,9 @@ export default function AdminCouponsPage() {
               {coupons.map((c) => (
                 <tr key={c.id} className="border-t">
                   <td className="px-4 py-3 font-mono">{c.code}</td>
+                  <td className="px-4 py-3 text-xs">
+                    {APPLIES_LABEL[c.appliesTo] ?? c.appliesTo}
+                  </td>
                   <td className="px-4 py-3">
                     {c.usedCount}/{c.maxUsers ?? "∞"}
                   </td>
@@ -145,6 +187,27 @@ export default function AdminCouponsPage() {
                   <td className="px-4 py-3">{c.status}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          const next =
+                            c.appliesTo === "NOTE"
+                              ? "BOTH"
+                              : c.appliesTo === "BOTH"
+                                ? "PHYSICAL"
+                                : "NOTE";
+                          await fetch(`/api/admin/coupons/${c.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ appliesTo: next }),
+                          });
+                          toast.success(`Applies to: ${APPLIES_LABEL[next]}`);
+                          load();
+                        }}
+                      >
+                        Scope
+                      </Button>
                       <Button size="sm" variant="secondary" onClick={() => toggle(c.id, c.status)}>
                         Toggle
                       </Button>

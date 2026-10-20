@@ -100,6 +100,23 @@ export async function uploadFile(
   }
 }
 
+export async function downloadStoredFile(key: string): Promise<Buffer | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const res = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    const body = res.Body;
+    if (!body) return null;
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of body as AsyncIterable<Uint8Array>) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  } catch {
+    return null;
+  }
+}
+
 export async function getSignedDownloadUrl(key: string, expiresIn = 300): Promise<string | null> {
   const client = getClient();
   if (!client) return null;

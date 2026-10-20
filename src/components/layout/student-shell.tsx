@@ -4,7 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, ShoppingCart, BookOpen, Receipt, User, Menu } from "lucide-react";
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  BookOpen,
+  Receipt,
+  User,
+  Menu,
+  Package,
+  Truck,
+} from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
 
@@ -13,6 +22,8 @@ const nav = [
   { href: "/cart", label: "Cart", icon: ShoppingCart },
   { href: "/purchases", label: "Purchased Notes", icon: BookOpen },
   { href: "/transactions", label: "Transactions", icon: Receipt },
+  { href: "/physical-documents", label: "Physical Documents", icon: Package },
+  { href: "/physical-orders", label: "Physical Orders", icon: Truck },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
@@ -33,7 +44,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           <nav className="mt-8 space-y-1">
             {nav.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}

@@ -20,11 +20,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 
   if (owned && note.pdfStorageKey) {
-    const { getSignedDownloadUrl } = await import("@/lib/storage");
-    const url = await getSignedDownloadUrl(note.pdfStorageKey, 600);
     return NextResponse.json({
       owned: true,
-      url,
+      url: `/api/notes/${note.id}/preview-stream`,
       freePages: note.pdfPageCount ?? note.freePreviewPages,
       totalPages: note.pdfPageCount,
       lockedPages: 0,
@@ -49,7 +47,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   return NextResponse.json({
     owned: false,
-    url: preview.url,
+    url: `/api/notes/${note.id}/preview-stream`,
     freePages: preview.freePages,
     totalPages: preview.totalPages,
     lockedPages: preview.lockedPages,

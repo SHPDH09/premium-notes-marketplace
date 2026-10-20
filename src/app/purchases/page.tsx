@@ -6,34 +6,31 @@ import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 export default function PurchasesPage() {
+  const router = useRouter();
   const [purchases, setPurchases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/purchases")
       .then((r) => r.json())
-      .then((d) => setPurchases(d.purchases ?? []));
+      .then((d) => setPurchases(d.purchases ?? []))
+      .finally(() => setLoading(false));
   }, []);
 
-  async function access(noteId: string, download = false) {
-    const res = await fetch(`/api/purchases/${noteId}/access`);
-    const data = await res.json();
-    if (!res.ok) return toast.error(data.error ?? "Access denied");
-    if (download && data.type === "pdf") {
-      const a = document.createElement("a");
-      a.href = data.url;
-      a.download = "notes.pdf";
-      a.click();
-    } else {
-      window.open(data.url, "_blank");
-    }
+  function openViewer(noteId: string) {
+    router.push(`/purchases/${noteId}/view`);
   }
 
   return (
     <StudentShell>
       <h1 className="mb-6 text-2xl font-bold">My Purchased Notes</h1>
+      {loading ? (
+        <BrandLoading fullPage message="Loading purchases…" />
+      ) : (
       <div className="grid gap-4 sm:grid-cols-2">
         {purchases.map((p) => (
           <Card key={p.id}>
@@ -49,16 +46,12 @@ export default function PurchasesPage() {
                   Purchased {new Date(p.purchasedAt).toLocaleDateString()} · {formatCurrency(p.purchasedPrice)}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => access(p.note.id)}>
-                  Open / View Notes
-                </Button>
-                {p.note.hasPdf && (
-                  <Button size="sm" variant="outline" onClick={() => access(p.note.id, true)}>
-                    Download PDF
-                  </Button>
-                )}
-              </div>
+              <Button size="sm" onClick={() => openViewer(p.note.id)}>
+                Open protected viewer
+              </Button>
+              <p className="text-xs text-slate-500">
+                View-only in your dashboard. Download and sharing are disabled.
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -68,6 +61,7 @@ export default function PurchasesPage() {
           </Card>
         )}
       </div>
+      )}
     </StudentShell>
   );
 }

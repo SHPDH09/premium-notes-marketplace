@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { readJsonResponse } from "@/lib/api/fetch-json";
+import { BrandLoading } from "@/components/brand/brand-loading";
 
 type RefundEntry = {
   amount: number;
@@ -55,17 +56,21 @@ export default function AdminTransactionsPage() {
   const [noteDialog, setNoteDialog] = useState<{ orderId: string; text: string } | null>(null);
   const [refundDialog, setRefundDialog] = useState<RefundDialogState | null>(null);
   const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
+    setLoading(true);
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     const res = await fetch(`/api/admin/transactions?${params}`, { credentials: "include", cache: "no-store" });
     const data = await readJsonResponse<{ transactions?: TxRow[]; error?: string }>(res);
     if (!res.ok) {
       toast.error(data.error ?? "Failed to load transactions");
+      setLoading(false);
       return;
     }
     setItems(data.transactions ?? []);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -168,6 +173,9 @@ export default function AdminTransactionsPage() {
           Search
         </Button>
       </div>
+      {loading ? (
+        <BrandLoading fullPage message="Loading transactions…" />
+      ) : (
       <Card>
         <CardContent className="overflow-x-auto p-0">
           <table className="min-w-full text-sm">
@@ -295,6 +303,7 @@ export default function AdminTransactionsPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {refundDialog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
