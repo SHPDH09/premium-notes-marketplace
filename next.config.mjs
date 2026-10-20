@@ -10,6 +10,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "30mb",
     },
+    serverComponentsExternalPackages: ["pdfjs-dist"],
   },
 };
 

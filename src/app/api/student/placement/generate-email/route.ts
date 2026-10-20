@@ -56,5 +56,6 @@ export async function POST(req: NextRequest) {
     body: generated.body,
     source: generated.source,
     hasResumeFile: !!profile?.resumeStorageKey,
+    hasResumeSummary: !!(profile?.resumeText && profile.resumeText.trim().length > 20),
   });
 }

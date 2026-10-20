@@ -24,6 +24,7 @@ export default function ProfilePlacementPage() {
     emailFooter: "",
   });
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   async function load() {
     const [st, pr, jobsPayload] = await Promise.all([
@@ -128,7 +129,31 @@ export default function ProfilePlacementPage() {
       if (!patch.ok) throw new Error(data.error ?? "Save failed");
 
       setProfile((p) => ({ ...p, resumeFileName: file.name }));
-      toast.success("Resume uploaded");
+      toast.success("Resume uploaded — generating AI summary…");
+      setAnalyzing(true);
+      try {
+        const analyzeRes = await fetch("/api/student/placement/resume/analyze", {
+          method: "POST",
+          credentials: "include",
+        });
+        const analyzeData = await analyzeRes.json();
+        if (analyzeRes.ok && analyzeData.resumeText) {
+          setProfile((p) => ({ ...p, resumeText: analyzeData.resumeText }));
+          toast.success(
+            analyzeData.summarySource === "ai"
+              ? "AI resume summary ready — used for job emails"
+              : "Resume text saved — add OpenAI key on Vercel for smarter summaries"
+          );
+        } else {
+          toast.error(
+            typeof analyzeData.error === "string"
+              ? analyzeData.error
+              : "Summary not generated — paste highlights below"
+          );
+        }
+      } finally {
+        setAnalyzing(false);
+      }
       void load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -217,18 +242,51 @@ export default function ProfilePlacementPage() {
               <Input
                 type="file"
                 accept="application/pdf"
-                disabled={uploading}
+                disabled={uploading || analyzing}
                 onChange={(e) => void onResumeFile(e.target.files?.[0] ?? null)}
               />
+              {analyzing ? (
+                <p className="mt-2 text-sm text-indigo-600">Analyzing resume with AI…</p>
+              ) : null}
             </div>
             <div>
-              <Label>Resume summary for AI (paste key skills, experience)</Label>
+              <Label>Resume summary for AI</Label>
+              <p className="mb-2 text-xs text-slate-500">
+                Auto-filled after PDF upload. Edit if needed — job application emails use this text.
+              </p>
               <Textarea
-                rows={6}
+                rows={8}
                 value={profile.resumeText}
                 onChange={(e) => setProfile({ ...profile, resumeText: e.target.value })}
-                placeholder="Paste highlights so AI can write job-specific emails…"
+                placeholder="Upload a PDF to auto-generate, or paste skills and experience here…"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                disabled={!profile.resumeFileName || analyzing}
+                onClick={async () => {
+                  setAnalyzing(true);
+                  try {
+                    const res = await fetch("/api/student/placement/resume/analyze", {
+                      method: "POST",
+                      credentials: "include",
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.resumeText) {
+                      setProfile((p) => ({ ...p, resumeText: data.resumeText }));
+                      toast.success("Summary regenerated");
+                    } else {
+                      toast.error(data.error ?? "Could not regenerate summary");
+                    }
+                  } finally {
+                    setAnalyzing(false);
+                  }
+                }}
+              >
+                Regenerate summary from PDF
+              </Button>
             </div>
           </CardContent>
         </Card>

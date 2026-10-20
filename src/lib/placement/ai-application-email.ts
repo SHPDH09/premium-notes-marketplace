@@ -1,3 +1,6 @@
+import { getPlacementOpenAiKey } from "@/lib/placement/openai-config";
+import { openAiJsonCompletion } from "@/lib/placement/openai-chat";
+
 type GenerateParams = {
   studentName: string;
   studentEmail: string;
@@ -13,17 +16,17 @@ function fallbackEmail(params: GenerateParams) {
   const middle = [
     `Dear Hiring Team,`,
     ``,
-    `I am writing to express my interest in the ${params.jobTitle} role at ${params.company}.`,
+    `I hope this message finds you well. I would like to apply for the ${params.jobTitle} position at ${params.company}.`,
     ``,
-    `Please find my resume attached for your review. I believe my background aligns well with the requirements outlined in your job posting.`,
+    `From my background, I believe I can contribute meaningfully to your team. Please find my resume attached for your review.`,
     ``,
     params.resumeText.trim()
-      ? `Highlights from my profile:\n${params.resumeText.trim().slice(0, 1200)}`
+      ? `A brief overview of my profile:\n${params.resumeText.trim().slice(0, 1200)}`
       : `I have uploaded my resume on my TechLaunchpad placement profile.`,
     ``,
-    `Thank you for your time and consideration.`,
+    `Thank you for considering my application. I would welcome the opportunity to discuss how I can support ${params.company}.`,
     ``,
-    `Best regards,`,
+    `Warm regards,`,
     params.studentName,
     params.studentEmail,
   ].join("\n");
@@ -33,22 +36,36 @@ function fallbackEmail(params: GenerateParams) {
   return { subject, body };
 }
 
+const EMAIL_SYSTEM_PROMPT = `You write job application emails for students in India applying in English.
+
+Output JSON only: {"subject":"...","body":"..."}.
+
+Style:
+- Sound like a real person wrote it: natural, warm, professional, confident but humble.
+- Avoid robotic openings ("I am writing to express my interest", "Dear Sir/Madam" unless no name).
+- Prefer "Dear Hiring Team" or "Hello [Company] Team" when no recruiter name.
+- Connect 2-3 specific strengths from the resume summary to this job description (do not invent facts).
+- 200–320 words for the main letter body (excluding header/footer).
+- Plain text only — no markdown, no bullet lists unless very short (max 3 lines).
+- Clear subject line: specific role + candidate name, professional tone.
+- End with a polite close and the candidate's name.
+- If customHeader/customFooter are non-empty in the input, place them at the very top and very bottom of body.
+- Mention that the resume is attached (once, naturally).
+
+Never fabricate employers, degrees, certifications, or years of experience not supported by the resume text.`;
+
 export async function generateApplicationEmail(
   params: GenerateParams
 ): Promise<{ subject: string; body: string; source: "ai" | "template" }> {
-  const apiKey = process.env.PLACEMENT_OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  if (!getPlacementOpenAiKey()) {
     return { ...fallbackEmail(params), source: "template" };
   }
-
-  const model = process.env.PLACEMENT_OPENAI_MODEL?.trim() || "gpt-4o-mini";
-  const system = `You write professional job application emails for students in India. Output JSON only: {"subject":"...","body":"..."}. The body must be plain text (no markdown). Tailor the email to the job description and the candidate resume. Keep it concise (180-260 words in the main letter). Do not invent employers or degrees not supported by the resume text.`;
 
   const userContent = JSON.stringify({
     candidate: {
       name: params.studentName,
       email: params.studentEmail,
-      resume: params.resumeText.slice(0, 8000),
+      resumeSummary: params.resumeText.slice(0, 8000),
     },
     job: {
       title: params.jobTitle,
@@ -57,36 +74,10 @@ export async function generateApplicationEmail(
     },
     customHeader: params.header ?? "",
     customFooter: params.footer ?? "",
-    instructions:
-      "Include custom header at the top and custom footer at the bottom when provided. Mention that the resume is attached.",
   });
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.4,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: userContent },
-        ],
-      }),
-    });
-
-    if (!res.ok) {
-      return { ...fallbackEmail(params), source: "template" };
-    }
-
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const raw = data.choices?.[0]?.message?.content;
+    const raw = await openAiJsonCompletion(EMAIL_SYSTEM_PROMPT, userContent);
     if (!raw) return { ...fallbackEmail(params), source: "template" };
 
     const parsed = JSON.parse(raw) as { subject?: string; body?: string };
@@ -99,7 +90,8 @@ export async function generateApplicationEmail(
       body: parsed.body.trim(),
       source: "ai",
     };
-  } catch {
+  } catch (e) {
+    console.error("generateApplicationEmail parse error", e);
     return { ...fallbackEmail(params), source: "template" };
   }
 }

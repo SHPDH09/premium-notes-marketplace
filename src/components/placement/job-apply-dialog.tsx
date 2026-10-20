@@ -88,8 +88,12 @@ export function JobApplyDialog({
         return;
       }
       setEmailDraft(data);
-      if (data.source === "template") {
-        toast.message("Using built-in template. Add PLACEMENT_OPENAI_API_KEY on Vercel for AI emails.");
+      if (!data.hasResumeSummary) {
+        toast.message("Add or regenerate resume summary in Placement profile for stronger AI emails.");
+      } else if (data.source === "template") {
+        toast.message("Using basic template — check PLACEMENT_OPENAI_API_KEY (or OPENAI_API_KEY) on Vercel.");
+      } else {
+        toast.success("AI application email ready");
       }
     } finally {
       setLoading(false);
