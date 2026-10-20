@@ -24,18 +24,30 @@ export function JobShareButton({
   async function shareOnWhatsApp() {
     setSharing(true);
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : brand.website;
-      const message = buildWhatsAppJobShareMessage(job, origin);
+      const res = await fetch(`/api/placement/jobs/${job.id}/whatsapp-message`, {
+        cache: "no-store",
+      });
+      const data = (await res.json()) as { message?: string; error?: string };
+
+      let message: string;
+      if (res.ok && data.message) {
+        message = data.message;
+      } else {
+        const origin = typeof window !== "undefined" ? window.location.origin : brand.website;
+        message = buildWhatsAppJobShareMessage(job, origin);
+        toast.message("Using short fallback — try again for full format.");
+      }
+
       const waUrl = buildWhatsAppShareUrl(message);
 
       try {
         await navigator.clipboard.writeText(message);
       } catch {
-        /* clipboard optional */
+        /* optional */
       }
 
       window.open(waUrl, "_blank", "noopener,noreferrer");
-      toast.success("WhatsApp opened — message ready to send");
+      toast.success("WhatsApp opened with job post format");
     } catch {
       toast.error("Could not open WhatsApp");
     } finally {
