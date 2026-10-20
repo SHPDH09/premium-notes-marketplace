@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatApiError } from "@/lib/api/format-api-error";
 import { toast } from "sonner";
-import { Eye, Send, Users } from "lucide-react";
+import { JobPostingStats } from "@/components/placement/job-posting-stats";
+import { Send } from "lucide-react";
 import {
   JobPostingFormFields,
   emptyJobPostingForm,
@@ -30,6 +31,8 @@ type Submission = {
   applyUrl?: string | null;
   applyPhone?: string | null;
   walkInDetails?: string | null;
+  createdAt?: string;
+  postedAt?: string;
 };
 
 function statusLabel(status: string) {
@@ -177,14 +180,14 @@ export function StudentJobPostingsSection() {
                           Locked after approval — view counts only. Edit or delete is not allowed.
                         </p>
                       ) : null}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                      <span className="inline-flex items-center gap-1">
-                        <Eye className="h-4 w-4" /> {j.viewCount} views
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Users className="h-4 w-4" /> {j.applyCount} applies
-                      </span>
+                      {(j.postedAt || j.createdAt) && (
+                        <JobPostingStats
+                          className="mt-2"
+                          postedAt={j.reviewStatus === "VERIFIED" && j.postedAt ? j.postedAt : j.createdAt!}
+                          applyCount={j.applyCount}
+                          viewCount={j.viewCount}
+                        />
+                      )}
                     </div>
                   </div>
                   {!j.locked && (j.reviewStatus === "PENDING" || j.reviewStatus === "REJECTED") ? (

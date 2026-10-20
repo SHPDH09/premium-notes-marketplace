@@ -1,4 +1,5 @@
 import type { JobPosting, PlacementSubscriptionPlan, PlacedStudent } from "@prisma/client";
+import { jobPostedAt } from "@/lib/placement/job-posted-at";
 import { getPublicCoverUrl } from "@/lib/storage";
 import { decimalToNumber } from "@/lib/utils";
 
@@ -28,15 +29,22 @@ export function serializeJobPosting(job: JobPosting) {
 }
 
 /** Public job board — no recruiter email or WhatsApp number in API or share payloads. */
-export function serializeJobPostingPublic(job: JobPosting) {
+export function serializeJobPostingPublic(job: JobPosting, applyCount = 0) {
   const full = serializeJobPosting(job);
   const { applyEmail, applyPhone, ...rest } = full;
   void applyEmail;
+  const postedAt = jobPostedAt(job).toISOString();
+  const base = {
+    ...rest,
+    postedAt,
+    applyCount,
+    viewCount: job.viewCount,
+  };
   if (job.applyType === "CALL") {
-    return { ...rest, applyPhone };
+    return { ...base, applyPhone };
   }
   void applyPhone;
-  return rest;
+  return base;
 }
 
 export function serializePlacementPlan(plan: PlacementSubscriptionPlan) {

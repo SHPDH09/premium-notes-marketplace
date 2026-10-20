@@ -15,6 +15,7 @@ import { JobApplyDialog } from "@/components/placement/job-apply-dialog";
 import { JobShareButton } from "@/components/placement/job-share-button";
 import { JobViewBeacon } from "@/components/placement/job-view-beacon";
 import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
+import { JobPostingStats } from "@/components/placement/job-posting-stats";
 import { Briefcase, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatAppliedAt } from "@/lib/placement/format-applied-at";
@@ -30,6 +31,9 @@ type Job = {
   description: string;
   applyPhone?: string | null;
   appliedAt?: string | null;
+  postedAt?: string;
+  applyCount?: number;
+  viewCount?: number;
 };
 
 const APPLY_TYPE_FILTERS: { value: "ALL" | JobApplyType; label: string }[] = [
@@ -202,6 +206,14 @@ function PlacementPageContent() {
                     <p className="mt-1 text-xs font-medium uppercase tracking-wide text-indigo-600">
                       {job.applyType.replace("_", " ")}
                     </p>
+                    {job.postedAt ? (
+                      <JobPostingStats
+                        className="mt-2"
+                        postedAt={job.postedAt}
+                        applyCount={job.applyCount ?? 0}
+                        viewCount={job.viewCount}
+                      />
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <JobShareButton job={job} />

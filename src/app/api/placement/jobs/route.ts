@@ -18,6 +18,7 @@ export async function GET() {
     prisma.jobPosting.findMany({
       where: publicJobBoardWhere,
       orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      include: { _count: { select: { applications: true } } },
     }),
   ]);
 
@@ -34,7 +35,7 @@ export async function GET() {
   }
 
   const serializedJobs = jobs.map((job) => ({
-    ...serializeJobPostingPublic(job),
+    ...serializeJobPostingPublic(job, job._count.applications),
     appliedAt: applicationMap.get(job.id) ?? null,
   }));
 
