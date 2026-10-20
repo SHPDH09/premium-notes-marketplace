@@ -26,7 +26,15 @@ export function PublicNavbar() {
         <BrandLogo />
         <nav className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className="text-sm font-medium text-slate-600 hover:text-indigo-600">
+            <Link
+              key={l.href}
+              href={l.href}
+              className={
+                l.href === "/placement"
+                  ? "rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                  : "text-sm font-medium text-slate-600 hover:text-indigo-600"
+              }
+            >
               {l.label}
             </Link>
           ))}
@@ -65,7 +73,16 @@ export function PublicNavbar() {
         <div className="border-t border-slate-100 px-4 py-4 md:hidden">
           <div className="flex flex-col gap-3">
             {links.map((l) => (
-              <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="text-sm font-medium">
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className={
+                  l.href === "/placement"
+                    ? "rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-semibold text-white"
+                    : "text-sm font-medium"
+                }
+              >
                 {l.label}
               </Link>
             ))}

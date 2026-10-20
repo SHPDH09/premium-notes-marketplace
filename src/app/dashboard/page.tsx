@@ -5,6 +5,7 @@ import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
+import { PlacementEmailSetup } from "@/components/placement/placement-email-setup";
 
 export default function DashboardPage() {
   return (
@@ -35,6 +36,7 @@ export default function DashboardPage() {
             </Card>
           ))}
         </div>
+        <PlacementEmailSetup />
         <PlacedStudentsStrip title="Our placed students" />
         <Button asChild>
           <Link href="/notes">Browse Notes</Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildMailtoUrl } from "@/lib/placement/mailto";
@@ -32,6 +32,16 @@ export function JobApplyDialog({
     source: string;
     hasResumeFile: boolean;
   } | null>(null);
+  const [emailConfigured, setEmailConfigured] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/student/placement/smtp", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setEmailConfigured(!!d.emailConfigured))
+      .catch(() => setEmailConfigured(false));
+  }, [open]);
 
   if (!open || !job) return null;
 
@@ -73,6 +83,27 @@ export function JobApplyDialog({
   function openMailApp() {
     if (!emailDraft) return;
     window.location.href = buildMailtoUrl(emailDraft.to, emailDraft.subject, emailDraft.body);
+  }
+
+  async function sendViaGmail() {
+    setSending(true);
+    try {
+      const res = await fetch("/api/student/placement/send-application", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: job!.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Send failed");
+        return;
+      }
+      toast.success("Application email sent with your resume attached.");
+      onOpenChange(false);
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -140,16 +171,26 @@ export function JobApplyDialog({
                   </pre>
                 </div>
                 <div className="flex flex-col gap-2">
+                  {emailConfigured ? (
+                    <Button type="button" disabled={sending} onClick={() => void sendViaGmail()}>
+                      {sending ? "Sending…" : "Send from my Gmail (resume attached)"}
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-amber-800">
+                      Add Gmail + app password on your Dashboard → Placement email setup to send with attachment
+                      automatically.
+                    </p>
+                  )}
                   {emailDraft.hasResumeFile ? (
                     <Button type="button" variant="secondary" onClick={() => void downloadResume()}>
-                      Download my resume (attach in email)
+                      Download my resume (manual attach)
                     </Button>
                   ) : (
                     <p className="text-xs text-amber-800">
                       Upload a resume under Profile → Placement before sending.
                     </p>
                   )}
-                  <Button type="button" onClick={openMailApp}>
+                  <Button type="button" variant="outline" onClick={openMailApp}>
                     Open email app with message
                   </Button>
                 </div>

@@ -27,6 +27,7 @@ export default function PlacementPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [access, setAccess] = useState<string>("login_required");
+  const [canApply, setCanApply] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [applyJob, setApplyJob] = useState<Job | null>(null);
@@ -36,6 +37,7 @@ export default function PlacementPage() {
       .then((r) => r.json())
       .then((d) => {
         setAccess(d.access);
+        setCanApply(!!d.canApply);
         setJobs(d.jobs ?? []);
         setPlans(d.plans ?? []);
       })
@@ -47,7 +49,7 @@ export default function PlacementPage() {
       router.push(`/register?callbackUrl=${encodeURIComponent("/placement")}`);
       return;
     }
-    if (access !== "full") {
+    if (!canApply) {
       router.push("/profile/placement");
       return;
     }
@@ -63,10 +65,9 @@ export default function PlacementPage() {
             <p className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
               <Briefcase className="h-3.5 w-3.5" /> Placement cell
             </p>
-            <h1 className="mt-3 text-3xl font-bold text-slate-900">Job opportunities</h1>
+            <h1 className="mt-3 text-3xl font-bold text-slate-900">All job postings</h1>
             <p className="mt-2 max-w-2xl text-slate-600">
-              Exclusive openings for subscribed placement members. Upload your resume once and apply with
-              AI-assisted email templates.
+              Browse every active opening below. Apply when you are logged in with an active placement subscription.
             </p>
           </div>
           {session?.user?.role === "STUDENT" ? (
@@ -76,78 +77,83 @@ export default function PlacementPage() {
           ) : null}
         </div>
 
+        {!canApply && !loading ? (
+          <Card className="mb-6 border-indigo-100 bg-indigo-50/40">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+              {access === "login_required" ? (
+                <>
+                  <span className="text-slate-700">Login to apply for jobs.</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" asChild>
+                      <Link href={`/login?callbackUrl=${encodeURIComponent("/placement")}`}>Login</Link>
+                    </Button>
+                    <Button size="sm" variant="secondary" asChild>
+                      <Link href={`/register?callbackUrl=${encodeURIComponent("/placement")}`}>Register</Link>
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="text-slate-700">Placement subscription required to apply.</span>
+                  <Button size="sm" asChild>
+                    <Link href="/profile/placement">View plans & profile</Link>
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+
         <div className="mb-8">
           <PlacedStudentsStrip />
         </div>
 
         {loading ? (
           <BrandLoading message="Loading jobs…" />
-        ) : access === "login_required" ? (
-          <Card>
-            <CardContent className="space-y-4 p-8 text-center">
-              <p className="text-slate-600">Login or register to view placement jobs.</p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button asChild>
-                  <Link href={`/register?callbackUrl=${encodeURIComponent("/placement")}`}>Register</Link>
-                </Button>
-                <Button variant="secondary" asChild>
-                  <Link href={`/login?callbackUrl=${encodeURIComponent("/placement")}`}>Login</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : access === "subscription_required" ? (
-          <Card>
+        ) : !jobs.length ? (
+          <p className="rounded-xl border bg-white p-8 text-center text-slate-500">No active jobs right now.</p>
+        ) : (
+          <div className="space-y-4">
+            {jobs.map((job) => (
+              <Card key={job.id}>
+                <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-xl">{job.title}</CardTitle>
+                    <p className="text-sm text-slate-500">
+                      {job.company}
+                      {job.location ? ` · ${job.location}` : ""}
+                    </p>
+                    <p className="mt-1 text-xs font-medium uppercase tracking-wide text-indigo-600">
+                      {job.applyType.replace("_", " ")}
+                    </p>
+                  </div>
+                  <Button onClick={() => onApply(job)}>{canApply ? "Apply" : "Apply (login / subscribe)"}</Button>
+                </CardHeader>
+                <CardContent>
+                  <p className="whitespace-pre-wrap text-sm text-slate-700">{job.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {access === "subscription_required" && plans.length > 0 ? (
+          <Card className="mt-8">
             <CardHeader>
-              <CardTitle>Placement subscription required</CardTitle>
+              <CardTitle>Placement plans</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-slate-600">
-                Job listings are visible only to students with an active placement subscription. Contact admin or
-                choose a plan below once enrollment is enabled.
-              </p>
+            <CardContent>
               <ul className="space-y-2">
                 {plans.map((p) => (
                   <li key={p.id} className="rounded-lg border bg-white px-4 py-3 text-sm">
                     <span className="font-semibold text-slate-900">{p.name}</span>
                     {p.priceLabel ? <span className="text-slate-500"> — {p.priceLabel}</span> : null}
-                    {p.description ? <p className="mt-1 text-slate-500">{p.description}</p> : null}
                   </li>
                 ))}
               </ul>
-              <Button asChild>
-                <Link href="/profile/placement">Complete placement profile</Link>
-              </Button>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-4">
-            {!jobs.length ? (
-              <p className="rounded-xl border bg-white p-8 text-center text-slate-500">No active jobs right now.</p>
-            ) : (
-              jobs.map((job) => (
-                <Card key={job.id}>
-                  <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-xl">{job.title}</CardTitle>
-                      <p className="text-sm text-slate-500">
-                        {job.company}
-                        {job.location ? ` · ${job.location}` : ""}
-                      </p>
-                      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-indigo-600">
-                        {job.applyType.replace("_", " ")}
-                      </p>
-                    </div>
-                    <Button onClick={() => onApply(job)}>Apply</Button>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap text-sm text-slate-700">{job.description}</p>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        )}
+        ) : null}
       </main>
       <SiteFooter />
       <JobApplyDialog job={applyJob} open={!!applyJob} onOpenChange={(v) => !v && setApplyJob(null)} />
