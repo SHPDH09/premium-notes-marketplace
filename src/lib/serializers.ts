@@ -1,4 +1,14 @@
-import { Note, User, Order, Transaction, Coupon, Purchase } from "@prisma/client";
+import {
+  Note,
+  User,
+  Order,
+  Transaction,
+  Coupon,
+  Purchase,
+  PlacementSubscriptionPlan,
+  UserPlacementSubscription,
+  PlacementPlanOrder,
+} from "@prisma/client";
 import { getPublicCoverUrl } from "@/lib/storage";
 import { decimalToNumber } from "@/lib/utils";
 import { discountPercent as dp } from "@/lib/pricing";
@@ -113,5 +123,33 @@ export function serializePurchase(p: Purchase & { note: Note }) {
     note: serializeNotePublic(p.note, true),
     purchasedPrice: decimalToNumber(p.purchasedPrice),
     purchasedAt: p.purchasedAt.toISOString(),
+  };
+}
+
+export function serializePlacementSubscription(
+  sub: UserPlacementSubscription & { plan: PlacementSubscriptionPlan }
+) {
+  return {
+    id: sub.id,
+    planId: sub.planId,
+    planName: sub.plan.name,
+    status: sub.status,
+    startsAt: sub.startsAt.toISOString(),
+    endsAt: sub.endsAt?.toISOString() ?? null,
+    createdAt: sub.createdAt.toISOString(),
+  };
+}
+
+export function serializePlacementPlanOrder(
+  order: PlacementPlanOrder & { plan: PlacementSubscriptionPlan }
+) {
+  return {
+    id: order.id,
+    planId: order.planId,
+    planName: order.plan.name,
+    amount: decimalToNumber(order.amount),
+    paymentStatus: order.paymentStatus,
+    transactionId: order.cashfreeOrderId,
+    createdAt: order.createdAt.toISOString(),
   };
 }

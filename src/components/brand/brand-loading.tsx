@@ -44,7 +44,7 @@ export function BrandLoading(props: {
             width={dims.img.width}
             height={dims.img.height}
             className="relative z-[1] h-full w-full object-contain object-center"
-            priority
+            loading="lazy"
           />
         </div>
       </div>

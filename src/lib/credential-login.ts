@@ -26,7 +26,9 @@ export async function validateCredentialLogin(
   }
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
     if (!user) {
       return { ok: false, reason: "INVALID_CREDENTIALS" };
     }

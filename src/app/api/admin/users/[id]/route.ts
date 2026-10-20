@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/auth-helpers";
 import { prisma } from "@/lib/db";
-import { serializeUserAdmin, serializePurchase, serializeTransaction } from "@/lib/serializers";
+import {
+  serializeUserAdmin,
+  serializePurchase,
+  serializeTransaction,
+  serializePlacementSubscription,
+  serializePlacementPlanOrder,
+} from "@/lib/serializers";
 import { hashPassword } from "@/lib/password";
 import { decimalToNumber } from "@/lib/utils";
 import { z } from "zod";
@@ -18,6 +24,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         include: { order: { include: { items: { include: { note: true } } } } },
         orderBy: { createdAt: "desc" },
       },
+      placementSubscriptions: {
+        include: { plan: true },
+        orderBy: { createdAt: "desc" },
+      },
+      placementPlanOrders: {
+        include: { plan: true },
+        orderBy: { createdAt: "desc" },
+      },
       _count: { select: { purchases: true } },
     },
   });
@@ -28,13 +42,46 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     _sum: { totalAmount: true },
   });
 
+  const placementSpent = await prisma.placementPlanOrder.aggregate({
+    where: { userId: user.id, paymentStatus: "SUCCESS" },
+    _sum: { amount: true },
+  });
+
+  const noteTransactions = user.transactions.map((t) =>
+    serializeTransaction({ ...t, user })
+  );
+  const placementPayments = user.placementPlanOrders.map((o) =>
+    serializePlacementPlanOrder(o)
+  );
+
   return NextResponse.json({
     user: serializeUserAdmin(user),
     totalSpent: decimalToNumber(spent._sum.totalAmount ?? 0),
+    totalPlacementSpent: decimalToNumber(placementSpent._sum.amount ?? 0),
     purchases: user.purchases.map(serializePurchase),
-    transactions: user.transactions.map((t) =>
-      serializeTransaction({ ...t, user })
-    ),
+    placementSubscriptions: user.placementSubscriptions.map(serializePlacementSubscription),
+    placementPayments,
+    transactions: noteTransactions,
+    paymentHistory: [
+      ...noteTransactions.map((t) => ({
+        kind: "NOTE" as const,
+        id: t.id,
+        label: t.noteTitle ?? "Notes order",
+        amount: t.amount,
+        paymentStatus: t.paymentStatus,
+        transactionId: t.transactionId,
+        createdAt: t.createdAt,
+      })),
+      ...placementPayments.map((p) => ({
+        kind: "PLACEMENT" as const,
+        id: p.id,
+        label: `Placement: ${p.planName}`,
+        amount: p.amount,
+        paymentStatus: p.paymentStatus,
+        transactionId: p.transactionId,
+        createdAt: p.createdAt,
+      })),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
   });
 }
 

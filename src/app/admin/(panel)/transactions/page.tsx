@@ -19,6 +19,7 @@ type RefundEntry = {
 };
 
 type TxRow = {
+  kind?: "NOTE" | "PLACEMENT";
   orderId: string;
   transactionId: string | null;
   studentName: string;
@@ -182,8 +183,9 @@ export default function AdminTransactionsPage() {
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-3 py-2 text-left">Txn ID</th>
+                <th className="px-3 py-2 text-left">Type</th>
                 <th className="px-3 py-2 text-left">Student</th>
-                <th className="px-3 py-2 text-left">Note</th>
+                <th className="px-3 py-2 text-left">Item</th>
                 <th className="px-3 py-2 text-left">Coupon</th>
                 <th className="px-3 py-2 text-left">Final</th>
                 <th className="px-3 py-2 text-left">Refunded</th>
@@ -194,8 +196,9 @@ export default function AdminTransactionsPage() {
             </thead>
             <tbody>
               {items.map((t) => (
-                <tr key={t.orderId} className="border-t">
+                <tr key={`${t.kind ?? "NOTE"}-${t.orderId}`} className="border-t">
                   <td className="px-3 py-2 font-mono text-xs">{t.transactionId ?? "—"}</td>
+                  <td className="px-3 py-2">{t.kind === "PLACEMENT" ? "Placement" : "Notes"}</td>
                   <td className="px-3 py-2">{t.studentName}</td>
                   <td className="px-3 py-2 max-w-xs">
                     <div className="font-medium text-slate-900">{t.noteName}</div>
@@ -255,42 +258,49 @@ export default function AdminTransactionsPage() {
                   <td className="px-3 py-2">{new Date(t.date).toLocaleString()}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {t.noteIds[0] ? (
+                      {t.kind !== "PLACEMENT" && t.noteIds[0] ? (
                         <Button size="sm" variant="outline" asChild>
                           <Link href={`/admin/notes/edit/${t.noteIds[0]}`}>Open note</Link>
                         </Button>
                       ) : null}
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          setNoteDialog({ orderId: t.orderId, text: t.adminNote ?? "" })
-                        }
-                      >
-                        Admin note
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        disabled={!t.canRefund || refundingId === t.orderId}
-                        title={
-                          !t.refundWindowOpen && t.paymentStatus === "SUCCESS"
-                            ? "Refund window expired (12h)"
-                            : !t.canRefund
-                              ? "Not refundable"
-                              : undefined
-                        }
-                        onClick={() => openRefundDialog(t)}
-                      >
-                        {refundingId === t.orderId ? "Refunding…" : "Refund"}
-                      </Button>
-                      {t.refundDeadline &&
-                      (t.paymentStatus === "SUCCESS" || t.paymentStatus === "PARTIALLY_REFUNDED") ? (
-                        <span className="w-full text-xs text-slate-500">
-                          {t.refundWindowOpen
-                            ? `Refund until ${new Date(t.refundDeadline).toLocaleString()}`
-                            : "Refund window closed"}
-                        </span>
+                      {t.kind === "PLACEMENT" ? (
+                        <span className="text-xs text-slate-500">Placement subscription</span>
+                      ) : null}
+                      {t.kind !== "PLACEMENT" ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() =>
+                              setNoteDialog({ orderId: t.orderId, text: t.adminNote ?? "" })
+                            }
+                          >
+                            Admin note
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={!t.canRefund || refundingId === t.orderId}
+                            title={
+                              !t.refundWindowOpen && t.paymentStatus === "SUCCESS"
+                                ? "Refund window expired (12h)"
+                                : !t.canRefund
+                                  ? "Not refundable"
+                                  : undefined
+                            }
+                            onClick={() => openRefundDialog(t)}
+                          >
+                            {refundingId === t.orderId ? "Refunding…" : "Refund"}
+                          </Button>
+                          {t.refundDeadline &&
+                          (t.paymentStatus === "SUCCESS" || t.paymentStatus === "PARTIALLY_REFUNDED") ? (
+                            <span className="w-full text-xs text-slate-500">
+                              {t.refundWindowOpen
+                                ? `Refund until ${new Date(t.refundDeadline).toLocaleString()}`
+                                : "Refund window closed"}
+                            </span>
+                          ) : null}
+                        </>
                       ) : null}
                     </div>
                   </td>

@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrandLoading } from "@/components/brand/brand-loading";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
+import { formatApiError } from "@/lib/api/format-api-error";
+import { studentDashboardPath } from "@/lib/login-redirect";
 
 function RegisterForm() {
   const router = useRouter();
@@ -23,11 +25,16 @@ function RegisterForm() {
     setLoading(true);
     const form = new FormData(e.currentTarget);
     const payload = {
-      name: String(form.get("name")),
+      name: String(form.get("name")).trim(),
       email: String(form.get("email")).toLowerCase().trim(),
-      phone: String(form.get("phone") || ""),
+      phone: String(form.get("phone") || "").trim(),
       password: String(form.get("password")),
     };
+    if (payload.name.length < 2) {
+      setLoading(false);
+      toast.error("Name must be at least 2 characters");
+      return;
+    }
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -36,18 +43,23 @@ function RegisterForm() {
     const data = await res.json();
     if (!res.ok) {
       setLoading(false);
-      toast.error(typeof data.error === "string" ? data.error : "Registration failed");
+      toast.error(formatApiError(data.error));
       return;
     }
-    await signIn("credentials", {
+    const signInRes = await signIn("credentials", {
       email: payload.email,
       password: payload.password,
       admin: "false",
       redirect: false,
     });
     setLoading(false);
+    if (signInRes?.error) {
+      toast.success("Account created. Please sign in.");
+      router.push(`/login?callbackUrl=${encodeURIComponent(studentDashboardPath(callbackUrl))}`);
+      return;
+    }
     toast.success("Account created successfully");
-    router.push(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
+    router.push(studentDashboardPath(callbackUrl));
     router.refresh();
   }
 
@@ -60,7 +72,7 @@ function RegisterForm() {
             <form onSubmit={onSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" name="name" required />
+                <Input id="name" name="name" minLength={2} required />
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>
