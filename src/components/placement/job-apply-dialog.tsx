@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildMailtoUrl } from "@/lib/placement/mailto";
+import { formatAppliedAt } from "@/lib/placement/format-applied-at";
 import { ExternalLink, Mail, MapPin, X } from "lucide-react";
 
 type Job = {
@@ -13,16 +14,19 @@ type Job = {
   applyType: "EMAIL" | "LINK" | "WALK_IN";
   applyUrl?: string | null;
   walkInDetails?: string | null;
+  appliedAt?: string | null;
 };
 
 export function JobApplyDialog({
   job,
   open,
   onOpenChange,
+  onApplied,
 }: {
   job: Job | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onApplied?: (jobId: string, appliedAt: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [emailDraft, setEmailDraft] = useState<{
@@ -34,16 +38,39 @@ export function JobApplyDialog({
   } | null>(null);
   const [emailConfigured, setEmailConfigured] = useState(false);
   const [sending, setSending] = useState(false);
+  const [markingWalkIn, setMarkingWalkIn] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setEmailDraft(null);
+      return;
+    }
     fetch("/api/student/placement/smtp", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setEmailConfigured(!!d.emailConfigured))
       .catch(() => setEmailConfigured(false));
-  }, [open]);
+  }, [open, job?.id]);
 
   if (!open || !job) return null;
+
+  const activeJob = job;
+
+  async function recordApply(channel: "EMAIL_GMAIL" | "EMAIL_MAILTO" | "EXTERNAL_LINK" | "WALK_IN") {
+    const res = await fetch("/api/student/placement/record-application", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId: activeJob.id, channel }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error ?? "Could not save application");
+      return null;
+    }
+    const appliedAt = data.appliedAt as string;
+    onApplied?.(activeJob.id, appliedAt);
+    return appliedAt;
+  }
 
   async function prepareEmailApply() {
     setLoading(true);
@@ -53,7 +80,7 @@ export function JobApplyDialog({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: job!.id }),
+        body: JSON.stringify({ jobId: activeJob.id }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -80,9 +107,13 @@ export function JobApplyDialog({
     toast.success("Download your resume PDF and attach it in the email app.");
   }
 
-  function openMailApp() {
+  async function openMailApp() {
     if (!emailDraft) return;
+    const appliedAt = await recordApply("EMAIL_MAILTO");
+    if (!appliedAt) return;
     window.location.href = buildMailtoUrl(emailDraft.to, emailDraft.subject, emailDraft.body);
+    toast.success("Application recorded. Complete send in your email app.");
+    onOpenChange(false);
   }
 
   async function sendViaGmail() {
@@ -92,17 +123,42 @@ export function JobApplyDialog({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: job!.id }),
+        body: JSON.stringify({ jobId: activeJob.id }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Send failed");
         return;
       }
+      if (data.appliedAt) {
+        onApplied?.(activeJob.id, data.appliedAt);
+      }
       toast.success("Application email sent with your resume attached.");
       onOpenChange(false);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function openExternalLink() {
+    const url = activeJob.applyUrl;
+    if (!url) return;
+    const appliedAt = await recordApply("EXTERNAL_LINK");
+    if (!appliedAt) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+    toast.success("Application recorded.");
+    onOpenChange(false);
+  }
+
+  async function markWalkInApplied() {
+    setMarkingWalkIn(true);
+    try {
+      const appliedAt = await recordApply("WALK_IN");
+      if (!appliedAt) return;
+      toast.success("Walk-in application recorded.");
+      onOpenChange(false);
+    } finally {
+      setMarkingWalkIn(false);
     }
   }
 
@@ -115,8 +171,8 @@ export function JobApplyDialog({
       >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Apply — {job.title}</h2>
-            <p className="text-sm text-slate-500">{job.company}</p>
+            <h2 className="text-lg font-bold text-slate-900">Apply — {activeJob.title}</h2>
+            <p className="text-sm text-slate-500">{activeJob.company}</p>
           </div>
           <button
             type="button"
@@ -128,29 +184,39 @@ export function JobApplyDialog({
           </button>
         </div>
 
-        {job.applyType === "LINK" && job.applyUrl ? (
+        {activeJob.appliedAt ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <p className="font-semibold">Already applied</p>
+            <p className="mt-1 text-emerald-800">Applied on {formatAppliedAt(activeJob.appliedAt)}</p>
+          </div>
+        ) : null}
+
+        {!activeJob.appliedAt && activeJob.applyType === "LINK" && activeJob.applyUrl ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">You will be redirected to the official application page.</p>
-            <Button asChild className="w-full">
-              <a href={job.applyUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open apply link
-              </a>
+            <Button type="button" className="w-full" onClick={() => void openExternalLink()}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open apply link
             </Button>
           </div>
         ) : null}
 
-        {job.applyType === "WALK_IN" ? (
-          <div className="space-y-3 rounded-xl border bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="flex items-center gap-2 font-semibold text-slate-900">
-              <MapPin className="h-4 w-4 text-indigo-600" />
-              Walk-in details
-            </p>
-            <p className="whitespace-pre-wrap">{job.walkInDetails}</p>
+        {!activeJob.appliedAt && activeJob.applyType === "WALK_IN" ? (
+          <div className="space-y-3">
+            <div className="rounded-xl border bg-slate-50 p-4 text-sm text-slate-700">
+              <p className="flex items-center gap-2 font-semibold text-slate-900">
+                <MapPin className="h-4 w-4 text-indigo-600" />
+                Walk-in details
+              </p>
+              <p className="mt-2 whitespace-pre-wrap">{activeJob.walkInDetails}</p>
+            </div>
+            <Button type="button" className="w-full" disabled={markingWalkIn} onClick={() => void markWalkInApplied()}>
+              {markingWalkIn ? "Saving…" : "Mark as applied (walk-in)"}
+            </Button>
           </div>
         ) : null}
 
-        {job.applyType === "EMAIL" ? (
+        {!activeJob.appliedAt && activeJob.applyType === "EMAIL" ? (
           <div className="space-y-4">
             {!emailDraft ? (
               <Button className="w-full" disabled={loading} onClick={() => void prepareEmailApply()}>
@@ -190,7 +256,7 @@ export function JobApplyDialog({
                       Upload a resume under Profile → Placement before sending.
                     </p>
                   )}
-                  <Button type="button" variant="outline" onClick={openMailApp}>
+                  <Button type="button" variant="outline" onClick={() => void openMailApp()}>
                     Open email app with message
                   </Button>
                 </div>

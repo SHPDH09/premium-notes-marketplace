@@ -20,7 +20,22 @@ export async function GET() {
     }),
   ]);
 
-  const serializedJobs = jobs.map(serializeJobPosting);
+  let applicationMap = new Map<string, string>();
+
+  if (session?.user?.id && session.user.role === "STUDENT") {
+    const applications = await prisma.jobApplication.findMany({
+      where: { userId: session.user.id },
+      select: { jobId: true, appliedAt: true },
+    });
+    applicationMap = new Map(
+      applications.map((a) => [a.jobId, a.appliedAt.toISOString()])
+    );
+  }
+
+  const serializedJobs = jobs.map((job) => ({
+    ...serializeJobPosting(job),
+    appliedAt: applicationMap.get(job.id) ?? null,
+  }));
 
   if (!session?.user?.id || session.user.role !== "STUDENT") {
     return NextResponse.json({

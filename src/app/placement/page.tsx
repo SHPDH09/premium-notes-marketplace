@@ -13,8 +13,9 @@ import { Label } from "@/components/ui/label";
 import { BrandLoading } from "@/components/brand/brand-loading";
 import { JobApplyDialog } from "@/components/placement/job-apply-dialog";
 import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
-import { Briefcase } from "lucide-react";
+import { Briefcase, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatAppliedAt } from "@/lib/placement/format-applied-at";
 
 type JobApplyType = "EMAIL" | "LINK" | "WALK_IN";
 
@@ -25,6 +26,7 @@ type Job = {
   location?: string | null;
   applyType: JobApplyType;
   description: string;
+  appliedAt?: string | null;
 };
 
 const APPLY_TYPE_FILTERS: { value: "ALL" | JobApplyType; label: string }[] = [
@@ -46,7 +48,8 @@ export default function PlacementPage() {
   const [typeFilter, setTypeFilter] = useState<"ALL" | JobApplyType>("ALL");
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
+  function loadJobs() {
+    setLoading(true);
     fetch("/api/placement/jobs", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
@@ -56,7 +59,16 @@ export default function PlacementPage() {
         setPlans(d.plans ?? []);
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadJobs();
   }, [session?.user?.id]);
+
+  function markJobApplied(jobId: string, appliedAt: string) {
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, appliedAt } : j)));
+    setApplyJob((prev) => (prev?.id === jobId ? { ...prev, appliedAt } : prev));
+  }
 
   const filteredJobs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -73,6 +85,7 @@ export default function PlacementPage() {
   }, [jobs, typeFilter, search]);
 
   function onApply(job: Job) {
+    if (job.appliedAt) return;
     if (status !== "authenticated" || session?.user?.role !== "STUDENT") {
       router.push(`/login?callbackUrl=${encodeURIComponent("/placement")}`);
       return;
@@ -167,7 +180,17 @@ export default function PlacementPage() {
                       {job.applyType.replace("_", " ")}
                     </p>
                   </div>
-                  <Button onClick={() => onApply(job)}>Apply</Button>
+                  {job.appliedAt ? (
+                    <div className="flex flex-col items-end gap-1 text-right">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+                        <CheckCircle2 className="h-4 w-4" aria-hidden />
+                        Already applied
+                      </span>
+                      <span className="text-xs text-slate-500">{formatAppliedAt(job.appliedAt)}</span>
+                    </div>
+                  ) : (
+                    <Button onClick={() => onApply(job)}>Apply</Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <p className="whitespace-pre-wrap text-sm text-slate-700">{job.description}</p>
@@ -207,7 +230,12 @@ export default function PlacementPage() {
         ) : null}
       </main>
       <SiteFooter />
-      <JobApplyDialog job={applyJob} open={!!applyJob} onOpenChange={(v) => !v && setApplyJob(null)} />
+      <JobApplyDialog
+        job={applyJob}
+        open={!!applyJob}
+        onOpenChange={(v) => !v && setApplyJob(null)}
+        onApplied={markJobApplied}
+      />
     </div>
   );
 }

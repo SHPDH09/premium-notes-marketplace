@@ -150,6 +150,13 @@ enum JobApplyType {
   WALK_IN
 }
 
+enum JobApplicationChannel {
+  EMAIL_GMAIL
+  EMAIL_MAILTO
+  EXTERNAL_LINK
+  WALK_IN
+}
+
 enum PlacementSubscriptionStatus {
   ACTIVE
   EXPIRED
@@ -186,6 +193,7 @@ model User {
   placementSubscriptions    UserPlacementSubscription[]
   placementPlanOrders       PlacementPlanOrder[]
   placedStudentProfile      PlacedStudent?
+  jobApplications           JobApplication[]
 
   @@map("users")
 }
@@ -824,8 +832,25 @@ model JobPosting {
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
+  applications JobApplication[]
+
   @@index([status, sortOrder])
   @@map("job_postings")
+}
+
+model JobApplication {
+  id        String                @id @default(cuid())
+  userId    String                @map("user_id")
+  jobId     String                @map("job_id")
+  channel   JobApplicationChannel
+  appliedAt DateTime              @default(now()) @map("applied_at")
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId, appliedAt])
+  @@map("job_applications")
 }
 
 model PlacedStudent {

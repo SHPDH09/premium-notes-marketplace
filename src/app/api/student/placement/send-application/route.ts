@@ -6,6 +6,8 @@ import { generateApplicationEmail } from "@/lib/placement/ai-application-email";
 import { userHasActivePlacementSubscription } from "@/lib/placement/subscription";
 import { decryptSecret } from "@/lib/secret-crypto";
 import { loadResumeBuffer, sendApplicationEmail } from "@/lib/placement/send-application-email";
+import { recordJobApplication } from "@/lib/placement/job-application";
+import { JobApplicationChannel } from "@prisma/client";
 
 const schema = z.object({ jobId: z.string().min(1) });
 
@@ -88,5 +90,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, source: generated.source });
+  const application = await recordJobApplication(
+    userId,
+    job.id,
+    JobApplicationChannel.EMAIL_GMAIL
+  );
+
+  return NextResponse.json({
+    ok: true,
+    source: generated.source,
+    appliedAt: application.appliedAt.toISOString(),
+  });
 }
