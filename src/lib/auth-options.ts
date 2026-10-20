@@ -1,9 +1,9 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
-import { verifyPassword } from "@/lib/password";
 import { rotateUserSession } from "@/lib/session-control";
 import { ensureNextAuthUrlEnv } from "@/lib/resolve-nextauth-url";
+import { validateCredentialLogin } from "@/lib/credential-login";
 
 ensureNextAuthUrlEnv();
 
@@ -48,28 +48,19 @@ export const authOptions: NextAuthOptions = {
         admin: { label: "Admin", type: "text" },
       },
       async authorize(credentials) {
-        if (!process.env.AUTH_SECRET?.trim()) {
-          console.error("AUTH_SECRET is missing — login cannot succeed.");
-          return null;
-        }
-
         if (!credentials?.email || !credentials?.password) return null;
 
+        const mode = credentials.admin === "true" ? "admin" : "student";
+        const check = await validateCredentialLogin(
+          credentials.email,
+          credentials.password,
+          mode
+        );
+        if (!check.ok) return null;
+
         try {
-          const email = credentials.email.toLowerCase().trim();
-          const user = await prisma.user.findUnique({ where: { email } });
+          const user = await prisma.user.findUnique({ where: { id: check.userId } });
           if (!user) return null;
-
-          const valid = await verifyPassword(credentials.password, user.passwordHash);
-          if (!valid) return null;
-
-          const wantsAdmin = credentials.admin === "true";
-          if (wantsAdmin && user.role !== "ADMIN") return null;
-          if (!wantsAdmin && user.role === "ADMIN") {
-            return null;
-          }
-
-          if (user.status === "DISABLED") return null;
 
           let sessionVersion = user.sessionVersion ?? 0;
           try {

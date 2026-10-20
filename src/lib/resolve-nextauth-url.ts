@@ -41,3 +41,24 @@ export function ensureNextAuthUrlEnv() {
     process.env.NEXTAUTH_URL = url;
   }
 }
+
+/** Align NextAuth CSRF/cookies with the host the browser actually used (www vs apex). */
+export function syncNextAuthUrlWithRequest(req: Request) {
+  const forwarded = req.headers.get("x-forwarded-host");
+  const hostHeader = req.headers.get("host");
+  const host = (forwarded?.split(",")[0]?.trim() || hostHeader?.split(",")[0]?.trim() || "")
+    .replace(/\/$/, "");
+
+  if (!host) {
+    ensureNextAuthUrlEnv();
+    return;
+  }
+
+  const protoRaw = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const proto =
+    protoRaw === "http" || (host.startsWith("localhost") && !protoRaw)
+      ? "http"
+      : "https";
+
+  process.env.NEXTAUTH_URL = `${proto}://${host}`.replace(/\/$/, "");
+}

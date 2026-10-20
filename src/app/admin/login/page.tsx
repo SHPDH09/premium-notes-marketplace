@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import Link from "next/link";
+import { loginFailureMessage, type LoginFailureReason } from "@/lib/credential-login-messages";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -18,15 +20,37 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
+    const email = String(form.get("email")).toLowerCase().trim();
+    const password = String(form.get("password"));
+
+    const precheck = await fetch("/api/auth/login-validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, mode: "admin" }),
+    });
+    const precheckData = (await precheck.json().catch(() => ({}))) as {
+      ok?: boolean;
+      reason?: LoginFailureReason;
+      message?: string;
+    };
+    if (!precheckData.ok) {
+      setLoading(false);
+      toast.error(
+        precheckData.message ||
+          loginFailureMessage(precheckData.reason ?? "INVALID_CREDENTIALS")
+      );
+      return;
+    }
+
     const res = await signIn("credentials", {
-      email: String(form.get("email")),
-      password: String(form.get("password")),
+      email,
+      password,
       admin: "true",
       redirect: false,
     });
     setLoading(false);
     if (res?.error) {
-      toast.error("Invalid admin credentials");
+      toast.error("Session could not be created. Refresh and try again.");
       return;
     }
     toast.success("Admin login successful");
@@ -54,6 +78,12 @@ export default function AdminLoginPage() {
               {loading ? "Signing in..." : "Login to Admin Panel"}
             </Button>
           </form>
+          <p className="mt-4 text-center text-sm text-slate-500">
+            Student account?{" "}
+            <Link href="/login" className="text-indigo-600">
+              Student Login
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

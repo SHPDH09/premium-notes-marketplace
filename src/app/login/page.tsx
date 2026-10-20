@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrandLoading } from "@/components/brand/brand-loading";
 import { toast } from "sonner";
+import { loginFailureMessage, type LoginFailureReason } from "@/lib/credential-login-messages";
+import { studentDashboardPath } from "@/lib/login-redirect";
 
 function LoginForm() {
   const router = useRouter();
@@ -23,16 +25,37 @@ function LoginForm() {
     setLoading(true);
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email")).toLowerCase().trim();
+    const password = String(form.get("password"));
+
+    const precheck = await fetch("/api/auth/login-validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, mode: "student" }),
+    });
+    const precheckData = (await precheck.json().catch(() => ({}))) as {
+      ok?: boolean;
+      reason?: LoginFailureReason;
+      message?: string;
+    };
+    if (!precheckData.ok) {
+      setLoading(false);
+      toast.error(
+        precheckData.message ||
+          loginFailureMessage(precheckData.reason ?? "INVALID_CREDENTIALS")
+      );
+      return;
+    }
+
     const res = await signIn("credentials", {
       email,
-      password: String(form.get("password")),
+      password,
       admin: "false",
       redirect: false,
     });
     setLoading(false);
     if (res?.error) {
       toast.error(
-        "Login failed. Check email/password. Admin accounts must use Admin Login. If this persists, contact support."
+        "Session could not be created. Refresh the page and try again, or contact support if this continues."
       );
       return;
     }
@@ -41,7 +64,7 @@ function LoginForm() {
       return;
     }
     toast.success("Welcome back!");
-    router.push(callbackUrl.startsWith("/") ? callbackUrl : "/dashboard");
+    router.push(studentDashboardPath(callbackUrl));
     router.refresh();
   }
 
@@ -65,6 +88,12 @@ function LoginForm() {
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-slate-500">
+          Platform admin?{" "}
+          <Link href="/admin/login" className="text-indigo-600">
+            Admin Login
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-sm text-slate-500">
           No account?{" "}
           <Link href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="text-indigo-600">
             Register
