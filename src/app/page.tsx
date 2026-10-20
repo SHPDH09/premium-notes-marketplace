@@ -52,6 +52,9 @@ export default async function HomePage() {
                   <Link href="/notes">Browse Notes</Link>
                 </Button>
                 <Button size="lg" variant="secondary" asChild>
+                  <Link href="/placement">Placement</Link>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
                   <Link href="/register">Create Student Account</Link>
                 </Button>
               </div>

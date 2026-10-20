@@ -144,6 +144,18 @@ enum PhysicalRefundStatus {
   REJECTED
 }
 
+enum JobApplyType {
+  EMAIL
+  LINK
+  WALK_IN
+}
+
+enum PlacementSubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
 model User {
   id            String     @id @default(cuid())
   name          String
@@ -170,6 +182,9 @@ model User {
   physicalCartItems         PhysicalCartItem[]
   physicalCartMeta          PhysicalCartMeta?
   physicalOrders            PhysicalOrder[]
+  careerProfile             StudentCareerProfile?
+  placementSubscriptions    UserPlacementSubscription[]
+  placedStudentProfile      PlacedStudent?
 
   @@map("users")
 }
@@ -722,6 +737,95 @@ model PhysicalCouponRedemption {
 
   @@unique([userId, couponId])
   @@map("physical_coupon_redemptions")
+}
+
+model PlacementSubscriptionPlan {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?       @db.Text
+  priceLabel   String?       @map("price_label")
+  durationDays Int?          @map("duration_days")
+  status       PublishStatus @default(ACTIVE)
+  sortOrder    Int           @default(0) @map("sort_order")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  subscriptions UserPlacementSubscription[]
+
+  @@map("placement_subscription_plans")
+}
+
+model UserPlacementSubscription {
+  id        String                      @id @default(cuid())
+  userId    String                      @map("user_id")
+  planId    String                      @map("plan_id")
+  status    PlacementSubscriptionStatus @default(ACTIVE)
+  startsAt  DateTime                    @default(now()) @map("starts_at")
+  endsAt    DateTime?                   @map("ends_at")
+  createdAt DateTime                    @default(now()) @map("created_at")
+  updatedAt DateTime                    @updatedAt @map("updated_at")
+
+  user User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan PlacementSubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@map("user_placement_subscriptions")
+}
+
+model StudentCareerProfile {
+  userId           String   @id @map("user_id")
+  resumeStorageKey String?  @map("resume_storage_key")
+  resumeFileName   String?  @map("resume_file_name")
+  resumeText       String?  @map("resume_text") @db.Text
+  emailHeader      String?  @map("email_header") @db.Text
+  emailFooter      String?  @map("email_footer") @db.Text
+  smtpEmail        String?  @map("smtp_email")
+  smtpAppPasswordEnc String? @map("smtp_app_password_enc") @db.Text
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_career_profiles")
+}
+
+model JobPosting {
+  id                   String        @id @default(cuid())
+  title                String
+  company              String
+  location             String?
+  applyType            JobApplyType  @map("apply_type")
+  description          String        @db.Text
+  applyEmail           String?       @map("apply_email")
+  applyUrl             String?       @map("apply_url")
+  walkInDetails        String?       @map("walk_in_details") @db.Text
+  requiresSubscription Boolean       @default(true) @map("requires_subscription")
+  status               PublishStatus @default(ACTIVE)
+  sortOrder            Int           @default(0) @map("sort_order")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, sortOrder])
+  @@map("job_postings")
+}
+
+model PlacedStudent {
+  id           String        @id @default(cuid())
+  userId       String?       @unique @map("user_id")
+  displayName  String        @map("display_name")
+  company      String
+  role         String?
+  packageLabel String?       @map("package_label")
+  photo        String?
+  story        String?       @db.Text
+  status       PublishStatus @default(ACTIVE)
+  sortOrder    Int           @default(0) @map("sort_order")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, sortOrder])
+  @@map("placed_students")
 }
 
 model AdminAuditLog {

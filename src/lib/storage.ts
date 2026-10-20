@@ -26,7 +26,7 @@ function getClient() {
   });
 }
 
-export function buildStorageKey(folder: "covers" | "pdfs", contentType: string): string {
+export function buildStorageKey(folder: "covers" | "pdfs" | "resumes", contentType: string): string {
   const ext =
     contentType === "application/pdf"
       ? "pdf"
@@ -35,7 +35,7 @@ export function buildStorageKey(folder: "covers" | "pdfs", contentType: string):
 }
 
 export async function createPresignedUpload(params: {
-  folder: "covers" | "pdfs";
+  folder: "covers" | "pdfs" | "resumes";
   contentType: string;
 }): Promise<{ key: string; uploadUrl: string; error?: string }> {
   const client = getClient();
@@ -65,7 +65,7 @@ export async function createPresignedUpload(params: {
 export async function uploadFile(
   file: Buffer,
   contentType: string,
-  folder: "covers" | "pdfs"
+  folder: "covers" | "pdfs" | "resumes"
 ): Promise<{ key: string; error?: string }> {
   const client = getClient();
   if (!client) {

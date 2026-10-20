@@ -4,6 +4,9 @@ import Link from "next/link";
 import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PlacedStudentsStrip } from "@/components/placement/placed-students-strip";
+import { PlacementEmailSetup } from "@/components/placement/placement-email-setup";
+import { PlacementDashboardHub } from "@/components/placement/placement-dashboard-hub";
 
 export default function DashboardPage() {
   return (
@@ -11,8 +14,13 @@ export default function DashboardPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Student Dashboard</h1>
-          <p className="text-slate-500">Manage cart, purchases, and profile in one place.</p>
+          <p className="text-slate-500">Notes, orders, and placement in one place.</p>
         </div>
+
+        <PlacementDashboardHub />
+
+        <PlacementEmailSetup />
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { title: "Cart", href: "/cart", desc: "Apply coupons & checkout" },
@@ -33,6 +41,8 @@ export default function DashboardPage() {
             </Card>
           ))}
         </div>
+
+        <PlacedStudentsStrip title="Our placed students" />
         <Button asChild>
           <Link href="/notes">Browse Notes</Link>
         </Button>

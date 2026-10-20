@@ -20,6 +20,8 @@ import {
   Truck,
   Printer,
   Settings,
+  Briefcase,
+  Award,
 } from "lucide-react";
 import { useState } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
@@ -31,6 +33,9 @@ const nav = [
   { href: "/admin/users", label: "Students", icon: Users },
   { href: "/admin/collaborators", label: "Collaborations", icon: Handshake },
   { href: "/admin/homepage", label: "Homepage", icon: Home },
+  { href: "/admin/placement/jobs", label: "Placement Jobs", icon: Briefcase },
+  { href: "/admin/placement/subscriptions", label: "Placement Plans", icon: Briefcase },
+  { href: "/admin/placed-students", label: "Placed Students", icon: Award },
   { href: "/admin/popups", label: "Popups", icon: Megaphone },
   { href: "/admin/physical-documents", label: "Physical Docs", icon: Package },
   { href: "/admin/physical-orders", label: "Physical Orders", icon: Truck },
