@@ -21,5 +21,5 @@ export function resumeTextForEmailGeneration(raw: string): string {
     return sections.join("\n\n").slice(0, 1600);
   }
 
-  return `${text.slice(0, 750).trim()}\n\n(Full resume is attached as PDF — do not repeat all details in the email.)`;
+  return text.slice(0, 1200).trim();
 }

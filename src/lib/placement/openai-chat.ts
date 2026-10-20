@@ -12,7 +12,7 @@ export async function openAiJsonCompletion(system: string, userJson: string): Pr
     },
     body: JSON.stringify({
       model: getPlacementOpenAiModel(),
-      temperature: 0.55,
+      temperature: 0.68,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: system },
