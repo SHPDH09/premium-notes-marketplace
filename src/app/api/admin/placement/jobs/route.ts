@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withAdminJson } from "@/lib/api/admin-route";
 import { prisma } from "@/lib/db";
 import { serializeJobPosting } from "@/lib/placement/serialize";
+import { scheduleWhatsAppChannelPublish } from "@/lib/whatsapp-channel/publish-job";
 import { JobApplyType, PublishStatus } from "@prisma/client";
 
 export async function GET() {
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Phone / WhatsApp number is required" }, { status: 400 });
     }
 
+    const status = d.status ?? "ACTIVE";
     const job = await prisma.jobPosting.create({
       data: {
         title: d.title,
@@ -61,10 +63,15 @@ export async function POST(req: NextRequest) {
         applyPhone: d.applyPhone?.trim() ?? null,
         walkInDetails: d.walkInDetails ?? null,
         requiresSubscription: d.requiresSubscription ?? true,
-        status: d.status ?? "ACTIVE",
+        status,
+        source: "ADMIN",
+        reviewStatus: "NONE",
         sortOrder: d.sortOrder ?? 0,
       },
     });
+    if (status === "ACTIVE") {
+      scheduleWhatsAppChannelPublish(job.id);
+    }
     return NextResponse.json({ job: serializeJobPosting(job) }, { status: 201 });
   });
 }

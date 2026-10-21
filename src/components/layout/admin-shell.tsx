@@ -45,6 +45,7 @@ const nav = [
   { href: "/admin/physical-orders", label: "Physical Orders", icon: Truck },
   { href: "/admin/printing-queue", label: "Printing Queue", icon: Printer },
   { href: "/admin/settings/shipping", label: "Shipping", icon: Settings },
+  { href: "/admin/settings/whatsapp-channel", label: "WhatsApp Channel", icon: Settings },
   { href: "/admin/transactions", label: "Transactions", icon: Receipt },
   { href: "/admin/profile", label: "Profile", icon: User },
   { href: "/admin/settings/password", label: "Password", icon: KeyRound },

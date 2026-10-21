@@ -31,6 +31,7 @@ function heuristicStructure(job: JobPosting): WhatsAppJobStructured {
   const joining = extractLabeledValue(desc, ["Joining", "Start date"]);
   const salary =
     extractLabeledValue(desc, ["Salary", "Expected Salary", "CTC", "Package"]);
+  const deadline = extractLabeledValue(desc, ["Deadline", "Last date", "Apply before", "Application deadline"]);
 
   let resp = responsibilities;
   let skill = skills;
@@ -58,6 +59,7 @@ function heuristicStructure(job: JobPosting): WhatsAppJobStructured {
       workMode: workMode ?? "As per company policy",
       joining: joining ?? "As discussed during hiring",
       salary: salary ?? "As per company standards (discuss in interview)",
+      deadline: deadline ?? undefined,
     },
     responsibilities: resp,
     skills: skill,

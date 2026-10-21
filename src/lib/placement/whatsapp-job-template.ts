@@ -14,6 +14,7 @@ export type WhatsAppJobStructured = {
     workMode?: string;
     joining?: string;
     salary?: string;
+    deadline?: string;
   };
   responsibilities: string[];
   skills: string[];
@@ -48,6 +49,7 @@ export function renderWhatsAppJobTemplate(
   if (o.workMode) lines.push(`🏢 Work Mode: ${o.workMode}`);
   if (o.joining) lines.push(`📅 Joining: ${o.joining}`);
   if (o.salary) lines.push(`💰 Expected Salary: ${o.salary}`);
+  if (o.deadline) lines.push(`⏰ Application deadline: ${o.deadline}`);
 
   lines.push(``, `🔹 KEY RESPONSIBILITIES`, ``);
   if (structured.responsibilities.length) {

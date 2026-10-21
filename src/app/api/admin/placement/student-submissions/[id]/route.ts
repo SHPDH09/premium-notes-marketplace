@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { formatZodFlatten } from "@/lib/api/format-api-error";
 import { jobPostingInputSchema } from "@/lib/placement/job-posting-schema";
 import { serializeJobPosting } from "@/lib/placement/serialize";
+import { scheduleWhatsAppChannelPublish } from "@/lib/whatsapp-channel/publish-job";
 
 const actionSchema = z.object({
   action: z.enum(["approve", "verify", "reject", "save"]),
@@ -74,6 +75,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         _count: { select: { applications: true } },
       },
     });
+
+    if (action === "verify") {
+      scheduleWhatsAppChannelPublish(job.id);
+    }
 
     return NextResponse.json({
       job: {

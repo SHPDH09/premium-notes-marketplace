@@ -180,6 +180,12 @@ enum JobReviewStatus {
   REJECTED
 }
 
+enum WhatsAppChannelPostStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 model User {
   id            String     @id @default(cuid())
   name          String
@@ -870,8 +876,9 @@ model JobPosting {
   createdAt            DateTime          @default(now()) @map("created_at")
   updatedAt            DateTime          @updatedAt @map("updated_at")
 
-  submittedBy  User?            @relation("JobSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
-  applications JobApplication[]
+  submittedBy           User?                    @relation("JobSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  applications          JobApplication[]
+  whatsappChannelPost   JobWhatsAppChannelPost?
 
   @@index([status, sortOrder])
   @@index([reviewStatus, source])
@@ -912,6 +919,34 @@ model PlacedStudent {
 
   @@index([status, sortOrder])
   @@map("placed_students")
+}
+
+model WhatsAppChannelSettings {
+  id         String   @id @default("default")
+  enabled    Boolean  @default(false)
+  provider   String   @default("wapio")
+  apiBaseUrl String   @default("https://api.wapio.io") @map("api_base_url")
+  channelId  String?  @map("channel_id")
+  apiKeyEnc  String?  @map("api_key_enc") @db.Text
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("whatsapp_channel_settings")
+}
+
+model JobWhatsAppChannelPost {
+  id           String                    @id @default(cuid())
+  jobId        String                    @unique @map("job_id")
+  status       WhatsAppChannelPostStatus @default(PENDING)
+  provider     String                    @default("wapio")
+  errorMessage String?                   @map("error_message") @db.Text
+  postedAt     DateTime?                 @map("posted_at")
+  createdAt    DateTime                  @default(now()) @map("created_at")
+  updatedAt    DateTime                  @updatedAt @map("updated_at")
+
+  job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("job_whatsapp_channel_posts")
 }
 
 model AdminAuditLog {
