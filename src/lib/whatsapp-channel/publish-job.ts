@@ -3,7 +3,7 @@ import { isJobLiveOnPublicBoard } from "@/lib/placement/job-board-visible";
 import { generateWhatsAppJobMessage } from "@/lib/placement/generate-whatsapp-job-message";
 import { prisma } from "@/lib/db";
 import { getWhatsAppChannelConfig } from "@/lib/whatsapp-channel/settings";
-import { wapioSendChannelMessage } from "@/lib/whatsapp-channel/wapio-provider";
+import { wapitoSendChannelMessage } from "@/lib/whatsapp-channel/wapito-provider";
 
 export type PublishJobWhatsAppResult =
   | { skipped: true; reason: string }
@@ -32,34 +32,33 @@ export async function publishJobToWhatsAppChannel(jobId: string): Promise<Publis
   const postRow = existing
     ? await prisma.jobWhatsAppChannelPost.update({
         where: { id: existing.id },
-        data: { status: "PENDING", provider: config.provider, errorMessage: null },
+        data: { status: "PENDING", provider: "wapito", errorMessage: null },
       })
     : await prisma.jobWhatsAppChannelPost.create({
         data: {
           jobId,
           status: "PENDING",
-          provider: config.provider,
+          provider: "wapito",
         },
       });
 
   const { message } = await generateWhatsAppJobMessage(job, brand.website);
 
-  let sendResult: Awaited<ReturnType<typeof wapioSendChannelMessage>>;
-  if (config.provider === "wapio") {
-    sendResult = await wapioSendChannelMessage({
-      apiBaseUrl: config.apiBaseUrl,
-      apiKey: config.apiKey,
-      channelId: config.channelId,
-      text: message,
-      idempotencyKey: `tl-job-${jobId}`,
-    });
-  } else {
+  const provider = config.provider === "wapio" ? "wapito" : config.provider;
+  if (provider !== "wapito") {
     await prisma.jobWhatsAppChannelPost.update({
       where: { id: postRow.id },
       data: { status: "FAILED", errorMessage: `Unsupported provider: ${config.provider}` },
     });
-    return { ok: false, error: `Unsupported provider: ${config.provider}` };
+    return { ok: false, error: `Unsupported provider: ${config.provider}. Use Wapito.` };
   }
+
+  const sendResult = await wapitoSendChannelMessage({
+    apiBaseUrl: config.apiBaseUrl,
+    apiKey: config.apiKey,
+    channelId: config.channelId,
+    text: message,
+  });
 
   if (!sendResult.ok) {
     await prisma.jobWhatsAppChannelPost.update({

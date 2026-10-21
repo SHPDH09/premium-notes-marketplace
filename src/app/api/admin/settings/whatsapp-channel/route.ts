@@ -39,7 +39,7 @@ export async function GET() {
         updatedAt: p.updatedAt.toISOString(),
       })),
       note:
-        "Uses a third-party REST provider (Wapio-compatible) with your Channel newsletter JID — not Meta Cloud API. Meta does not offer official Channel posting via API key alone.",
+        "Uses Wapito (https://wapito.com) — POST /v1/messages/text to your Channel newsletter JID (@newsletter). Not Meta Cloud API.",
     });
   });
 }

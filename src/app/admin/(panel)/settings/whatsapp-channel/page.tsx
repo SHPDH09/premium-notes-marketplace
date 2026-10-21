@@ -36,7 +36,7 @@ export default function WhatsAppChannelSettingsPage() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [enabled, setEnabled] = useState(false);
   const [channelId, setChannelId] = useState("");
-  const [apiBaseUrl, setApiBaseUrl] = useState("https://api.wapio.io");
+  const [apiBaseUrl, setApiBaseUrl] = useState("https://api.wapito.com/v1");
   const [apiKey, setApiKey] = useState("");
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ export default function WhatsAppChannelSettingsPage() {
     setNote(data.note ?? "");
     setEnabled(!!data.settings?.enabled);
     setChannelId(data.settings?.channelId ?? "");
-    setApiBaseUrl(data.settings?.apiBaseUrl ?? "https://api.wapio.io");
+    setApiBaseUrl(data.settings?.apiBaseUrl ?? "https://api.wapito.com/v1");
     setLoading(false);
   }
 
@@ -148,7 +148,7 @@ export default function WhatsAppChannelSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Provider (Wapio-compatible REST)</CardTitle>
+          <CardTitle>Wapito</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={save} className="space-y-4">
@@ -167,7 +167,7 @@ export default function WhatsAppChannelSettingsPage() {
                 id="wa-api-base"
                 value={apiBaseUrl}
                 onChange={(e) => setApiBaseUrl(e.target.value)}
-                placeholder="https://api.wapio.io"
+                placeholder="https://api.wapito.com/v1"
               />
             </div>
             <div>
@@ -180,7 +180,15 @@ export default function WhatsAppChannelSettingsPage() {
                 required
               />
               <p className="mt-1 text-xs text-slate-500">
-                From your provider dashboard — the newsletter / channel JID ending in @newsletter.
+                From Wapito dashboard — newsletter JID ending in <code>@newsletter</code>.{" "}
+                <a
+                  href="https://wapito.com/docs/getting-started/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 underline"
+                >
+                  Wapito setup guide
+                </a>
               </p>
             </div>
             <div>
@@ -190,7 +198,7 @@ export default function WhatsAppChannelSettingsPage() {
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={settings?.hasApiKey ? "Saved — enter only to replace" : "bps_sk_…"}
+                placeholder={settings?.hasApiKey ? "Saved — enter only to replace" : "wpt_…"}
                 autoComplete="off"
               />
             </div>
