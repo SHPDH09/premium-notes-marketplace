@@ -33,11 +33,19 @@ export async function walayerRequest<T = unknown>(params: {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
+  query?: Record<string, string | number | undefined>;
 }): Promise<{ ok: true; data: T; raw: unknown } | { ok: false; error: string; status: number }> {
   const base = normalizeWalayerBase(params.apiBaseUrl ?? WALAYER_DEFAULT_API_BASE);
   const path = params.path.startsWith("/") ? params.path : `/${params.path}`;
+  const qs = params.query
+    ? `?${new URLSearchParams(
+        Object.entries(params.query)
+          .filter(([, v]) => v !== undefined && v !== "")
+          .map(([k, v]) => [k, String(v)])
+      ).toString()}`
+    : "";
   try {
-    const res = await fetch(`${base}${path}`, {
+    const res = await fetch(`${base}${path}${qs}`, {
       method: params.method ?? (params.body !== undefined ? "POST" : "GET"),
       headers: {
         Authorization: `Bearer ${params.apiKey}`,
@@ -107,6 +115,101 @@ export async function walayerLogoutSession(apiKey: string, apiBaseUrl: string | 
     apiBaseUrl,
     path: `/sessions/${enc(sessionId)}/logout`,
     method: "POST",
+  });
+}
+
+export async function walayerListChatMessages(params: {
+  apiKey: string;
+  apiBaseUrl?: string;
+  sessionId: string;
+  chatJid: string;
+  limit?: number;
+}) {
+  return walayerRequest<unknown[] | { data?: unknown[] }>({
+    apiKey: params.apiKey,
+    apiBaseUrl: params.apiBaseUrl,
+    path: `/sessions/${enc(params.sessionId)}/chats/${enc(params.chatJid)}/messages`,
+    query: { limit: params.limit ?? 80 },
+  });
+}
+
+export async function walayerGetPlatformMessage(
+  apiKey: string,
+  apiBaseUrl: string | undefined,
+  messageId: string
+) {
+  return walayerRequest<Record<string, unknown>>({
+    apiKey,
+    apiBaseUrl,
+    path: `/messages/${enc(messageId)}`,
+  });
+}
+
+export async function walayerUploadMediaBase64(params: {
+  apiKey: string;
+  apiBaseUrl?: string;
+  base64: string;
+  mimeType: string;
+  filename?: string;
+}) {
+  const first = await walayerRequest<{ id: string }>({
+    apiKey: params.apiKey,
+    apiBaseUrl: params.apiBaseUrl,
+    path: "/media",
+    method: "POST",
+    body: {
+      base64: params.base64,
+      mime_type: params.mimeType,
+      mime: params.mimeType,
+      filename: params.filename,
+    },
+  });
+  if (first.ok) return first;
+  return walayerRequest<{ id: string }>({
+    apiKey: params.apiKey,
+    apiBaseUrl: params.apiBaseUrl,
+    path: "/media",
+    method: "POST",
+    body: {
+      data: params.base64,
+      content_type: params.mimeType,
+      filename: params.filename,
+    },
+  });
+}
+
+export async function walayerGetMediaReadUrl(
+  apiKey: string,
+  apiBaseUrl: string | undefined,
+  mediaId: string
+) {
+  return walayerRequest<{ url?: string; read_url?: string }>({
+    apiKey,
+    apiBaseUrl,
+    path: `/media/${enc(mediaId)}`,
+  });
+}
+
+export async function walayerSendTypedMessage(params: {
+  apiKey: string;
+  apiBaseUrl?: string;
+  sessionId: string;
+  to: string;
+  type: string;
+  body: Record<string, unknown>;
+  idempotencyKey: string;
+}) {
+  return walayerRequest({
+    apiKey: params.apiKey,
+    apiBaseUrl: params.apiBaseUrl,
+    path: `/sessions/${enc(params.sessionId)}/messages`,
+    method: "POST",
+    headers: { "Idempotency-Key": params.idempotencyKey },
+    body: {
+      type: params.type,
+      to: params.to,
+      body: params.body,
+    },
   });
 }
 

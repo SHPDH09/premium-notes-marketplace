@@ -1,5 +1,15 @@
 import type { CrmConversation } from "@prisma/client";
 
+export function resolveCrmMediaUrl(stored: string | null | undefined): string | null {
+  if (!stored) return null;
+  if (stored.startsWith("http://") || stored.startsWith("https://")) return stored;
+  if (stored.startsWith("walayer:")) {
+    const id = stored.slice("walayer:".length);
+    return id ? `/api/crm/media/walayer/${encodeURIComponent(id)}` : null;
+  }
+  return stored;
+}
+
 export function serializeCrmMessage(m: {
   id: string;
   direction: string;
@@ -19,6 +29,7 @@ export function serializeCrmMessage(m: {
     messageType: m.messageType,
     bodyText: m.bodyText,
     mediaUrl: m.mediaUrl,
+    mediaDisplayUrl: resolveCrmMediaUrl(m.mediaUrl),
     sendMethod: m.sendMethod,
     deliveryStatus: m.deliveryStatus,
     deliveryError: m.deliveryError,

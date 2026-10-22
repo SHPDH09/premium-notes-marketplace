@@ -1,6 +1,7 @@
 import type { CrmCallRecordStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { resolveCallLinks } from "@/lib/crm/calls/link-contact";
+import { parseWalayerMessagePayload } from "@/lib/crm/walayer-message-parse";
 import { formatDisplayPhone, normalizePhoneDigits, phoneFromWaJid } from "@/lib/crm/phone";
 
 type WalayerMessageReceived = {
@@ -41,7 +42,9 @@ export async function handleWalayerMessageReceived(sessionId: string, data: Wala
 
   const digits = normalizePhoneDigits(phone);
   const displayPhone = formatDisplayPhone(digits);
-  const textLower = (data.text ?? "").trim().toLowerCase();
+  const parsed = parseWalayerMessagePayload(data as Record<string, unknown>);
+  const messageText = parsed.text;
+  const textLower = messageText.toLowerCase();
   const isOptOut = ["stop", "unsubscribe", "opt out", "opt-out"].includes(textLower);
 
   const contact = await prisma.crmContact.upsert({
@@ -80,7 +83,8 @@ export async function handleWalayerMessageReceived(sessionId: string, data: Wala
     });
   }
 
-  const preview = (data.text ?? "").slice(0, 280) || `[${data.type ?? "message"}]`;
+  const preview =
+    messageText.slice(0, 280) || (parsed.mediaUrl ? `[${parsed.type}]` : `[${parsed.type}]`);
   const sentAt = data.at ? new Date(data.at * 1000) : new Date();
 
   const conversation = await prisma.crmConversation.upsert({
@@ -109,10 +113,11 @@ export async function handleWalayerMessageReceived(sessionId: string, data: Wala
     data: {
       conversationId: conversation.id,
       direction: "INBOUND",
-      messageType: data.type ?? "text",
-      bodyText: data.text ?? "",
-      providerMessageId: providerMessageId ?? undefined,
-      waMessageId: data.wa_message_id ?? undefined,
+      messageType: parsed.type,
+      bodyText: messageText,
+      mediaUrl: parsed.mediaUrl ?? undefined,
+      providerMessageId: parsed.providerMessageId ?? providerMessageId ?? undefined,
+      waMessageId: parsed.waMessageId ?? undefined,
       sendMethod: "EXTERNAL",
       deliveryStatus: "DELIVERED",
       sentAt,

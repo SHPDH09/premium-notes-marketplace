@@ -19,12 +19,27 @@ type Conversation = {
   contact?: { name: string | null; phone: string; id?: string };
 };
 
+function messageBodyLabel(m: { bodyText: string | null; messageType: string }): string {
+  const t = (m.bodyText ?? "").trim();
+  if (t) return t;
+  const labels: Record<string, string> = {
+    text: "Text message",
+    image: "Image",
+    video: "Video",
+    audio: "Voice message",
+    document: "Document",
+    sticker: "Sticker",
+  };
+  return labels[m.messageType] ?? `[${m.messageType}]`;
+}
+
 type Message = {
   id: string;
   direction: string;
   messageType: string;
   bodyText: string | null;
   mediaUrl: string | null;
+  mediaDisplayUrl?: string | null;
   deliveryStatus: string;
   deliveryError: string | null;
   sentAt: string;
@@ -96,6 +111,7 @@ export function InboxWorkspace({
   const [draft, setDraft] = useState("");
   const [composerMode, setComposerMode] = useState<"reply" | "note">("reply");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [listLoading, setListLoading] = useState(true);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("list");
   const [pollSince, setPollSince] = useState(() => new Date().toISOString());
@@ -183,6 +199,36 @@ export function InboxWorkspace({
   function selectConversation(id: string) {
     setSelectedId(id);
     setMobilePanel("chat");
+  }
+
+  async function sendAttachment(file: File) {
+    if (!selectedId || composerMode === "note") return;
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("File must be 16 MB or smaller");
+      return;
+    }
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      if (draft.trim()) form.append("caption", draft.trim());
+      const res = await fetch(`/api/crm/conversations/${selectedId}/messages`, {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Upload failed");
+        return;
+      }
+      setDraft("");
+      toast.success("Attachment sent");
+      void loadThread(selectedId);
+      void loadList();
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function sendMessage() {
@@ -467,12 +513,28 @@ export function InboxWorkspace({
                   m.direction === "OUTBOUND" ? "ml-auto bg-emerald-900/40" : "bg-slate-800"
                 }`}
               >
-                {m.mediaUrl ? (
-                  <a href={m.mediaUrl} target="_blank" rel="noreferrer" className="text-emerald-300 underline">
-                    Attachment ({m.messageType})
-                  </a>
+                {m.mediaDisplayUrl || m.mediaUrl ? (
+                  m.messageType === "image" && (m.mediaDisplayUrl || m.mediaUrl) ? (
+                    <a href={m.mediaDisplayUrl ?? m.mediaUrl ?? "#"} target="_blank" rel="noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={m.mediaDisplayUrl ?? m.mediaUrl ?? ""}
+                        alt=""
+                        className="mb-2 max-h-48 rounded-md object-contain"
+                      />
+                    </a>
+                  ) : (
+                    <a
+                      href={m.mediaDisplayUrl ?? m.mediaUrl ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mb-2 block text-emerald-300 underline"
+                    >
+                      Open {m.messageType} attachment
+                    </a>
+                  )
                 ) : null}
-                {m.bodyText ? <p className="whitespace-pre-wrap">{m.bodyText}</p> : null}
+                <p className="whitespace-pre-wrap">{messageBodyLabel(m)}</p>
                 <p className="mt-1 text-[10px] text-slate-400">
                   {new Date(m.sentAt).toLocaleString()} · {statusLabel(m.deliveryStatus)}
                   {m.repliedByLabel ? ` · ${m.repliedByLabel}` : ""}
@@ -531,19 +593,38 @@ export function InboxWorkspace({
               ))}
             </div>
             <div className="flex gap-2">
+              {composerMode === "reply" ? (
+                <label className="flex cursor-pointer items-center rounded-md border border-slate-700 bg-slate-900 px-3 text-sm text-slate-300 hover:bg-slate-800">
+                  📎
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void sendAttachment(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              ) : null}
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder={composerMode === "note" ? "Internal note (not sent to customer)…" : "Type a reply…"}
+                placeholder={
+                  composerMode === "note"
+                    ? "Internal note (not sent to customer)…"
+                    : "Type a reply or caption for attachment…"
+                }
                 className="border-slate-700 bg-slate-900"
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), void sendMessage())}
               />
-              <Button onClick={() => void sendMessage()} disabled={sending}>
-                {composerMode === "note" ? "Save" : sending ? "…" : "Send"}
+              <Button onClick={() => void sendMessage()} disabled={sending || uploading}>
+                {composerMode === "note" ? "Save" : sending || uploading ? "…" : "Send"}
               </Button>
             </div>
             <p className="mt-1 text-[10px] text-slate-500">
-              Media attachments via WALayer upload are not enabled in this build — text and existing inbound media links only.
+              Attach images or PDFs (max 16 MB). If inbound text is blank, enable content storage in WALayer or we sync from WhatsApp history automatically.
             </p>
           </footer>
         </>
