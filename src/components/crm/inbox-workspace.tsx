@@ -31,7 +31,13 @@ type ConvDetail = Conversation & {
   assignee?: { id: string; name: string } | null;
 };
 
-export function InboxWorkspace({ memberId }: { memberId?: string }) {
+export function InboxWorkspace({
+  memberId,
+  initialConversationId,
+}: {
+  memberId?: string;
+  initialConversationId?: string;
+}) {
   const [filter, setFilter] = useState<"all" | "unassigned" | "mine">("all");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -73,6 +79,10 @@ export function InboxWorkspace({ memberId }: { memberId?: string }) {
   useEffect(() => {
     void loadList();
   }, [loadList]);
+
+  useEffect(() => {
+    if (initialConversationId) setSelectedId(initialConversationId);
+  }, [initialConversationId]);
 
   useEffect(() => {
     if (selectedId) void loadThread(selectedId);

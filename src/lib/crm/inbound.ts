@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { phoneFromWaJid } from "@/lib/crm/phone";
+import { formatDisplayPhone, normalizePhoneDigits, phoneFromWaJid } from "@/lib/crm/phone";
 
 type WalayerMessageReceived = {
   message_id?: string;
@@ -37,15 +37,46 @@ export async function handleWalayerMessageReceived(sessionId: string, data: Wala
     if (dup) return { ok: true as const, duplicate: true };
   }
 
+  const digits = normalizePhoneDigits(phone);
+  const displayPhone = formatDisplayPhone(digits);
+  const textLower = (data.text ?? "").trim().toLowerCase();
+  const isOptOut = ["stop", "unsubscribe", "opt out", "opt-out"].includes(textLower);
+
   const contact = await prisma.crmContact.upsert({
-    where: { companyId_phone: { companyId: account.companyId, phone } },
+    where: { companyId_phoneNormalized: { companyId: account.companyId, phoneNormalized: digits } },
     create: {
       companyId: account.companyId,
-      phone,
+      phone: displayPhone,
+      phoneNormalized: digits,
       waJid: senderJid,
+      source: "whatsapp",
+      lastActivityAt: new Date(),
+      ...(isOptOut
+        ? { status: "DO_NOT_CONTACT", optedOutAt: new Date(), marketingConsent: false }
+        : {}),
     },
-    update: { waJid: senderJid },
+    update: {
+      waJid: senderJid,
+      lastActivityAt: new Date(),
+      ...(isOptOut
+        ? { status: "DO_NOT_CONTACT", optedOutAt: new Date(), marketingConsent: false }
+        : {}),
+    },
   });
+
+  if (isOptOut) {
+    await prisma.crmSuppressionEntry.upsert({
+      where: {
+        companyId_phoneNormalized: { companyId: account.companyId, phoneNormalized: digits },
+      },
+      create: {
+        companyId: account.companyId,
+        phoneNormalized: digits,
+        reason: "keyword_stop",
+      },
+      update: { reason: "keyword_stop" },
+    });
+  }
 
   const preview = (data.text ?? "").slice(0, 280) || `[${data.type ?? "message"}]`;
   const sentAt = data.at ? new Date(data.at * 1000) : new Date();
