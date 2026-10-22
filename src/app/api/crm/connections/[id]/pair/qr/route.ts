@@ -65,9 +65,12 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
     }
 
     const pair = await walayerStartPair(creds.apiKey, creds.apiBaseUrl, account.walayerSessionId);
+    let pairHint = "";
     if (pair.ok) {
       const fromPost =
-        (await qrPayloadToDataUrl(pair.data)) ?? (await qrPayloadToDataUrl(pair.raw));
+        (await qrPayloadToDataUrl(pair.data)) ??
+        (await qrPayloadToDataUrl(pair.raw)) ??
+        (await qrPayloadToDataUrl({ data: pair.data, raw: pair.raw }));
       if (fromPost) {
         return NextResponse.json({
           status: "qr",
@@ -75,6 +78,9 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
           message: "Scan with WhatsApp → Linked devices → Link a device.",
         });
       }
+      pairHint = "Pair started; waiting for QR frames.";
+    } else {
+      pairHint = pair.error;
     }
 
     const streamUrl = walayerPairStreamUrl(creds.apiBaseUrl, account.walayerSessionId);
@@ -91,7 +97,9 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
         {
           status: "error",
           qrImage: null,
-          message: "Could not open QR stream from WALayer. Try Reconnect QR again.",
+          message: pairHint
+            ? `Could not open QR stream (${pairHint}). Check WALayer API key and session.`
+            : "Could not open QR stream from WALayer. Try Reconnect QR again.",
         },
         { status: 502 }
       );

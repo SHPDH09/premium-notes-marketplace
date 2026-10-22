@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrandLoading } from "@/components/brand/brand-loading";
+import { consumeCrmPairStream } from "@/lib/walayer/pair-qr-client";
 import { toast } from "sonner";
 
 type Account = {
@@ -27,12 +28,14 @@ export default function CrmConnectionsPage() {
   const [label, setLabel] = useState("");
   const [country, setCountry] = useState("IN");
   const [pairingId, setPairingId] = useState<string | null>(null);
+  const [streamGeneration, setStreamGeneration] = useState(0);
   const [qr, setQr] = useState<QrState>({
     status: "idle",
     qrImage: null,
     message: "",
   });
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
 
   async function load() {
     const res = await fetch("/api/crm/connections", { credentials: "include" });
@@ -40,46 +43,25 @@ export default function CrmConnectionsPage() {
     if (res.ok) setAccounts(data.accounts ?? []);
   }
 
-  const fetchQr = useCallback(async (accountId: string, refresh = false, silent = false) => {
-    setQr((s) =>
-      silent && s.qrImage
-        ? s
-        : { ...s, status: "loading", message: refresh ? "Fetching QR…" : s.message }
-    );
+  const checkConnectionStatus = useCallback(async (accountId: string) => {
     try {
-      const url = `/api/crm/connections/${accountId}/pair/qr${refresh ? "?refresh=1" : ""}`;
-      const res = await fetch(url, { credentials: "include" });
-      const data = await res.json();
-      if (!res.ok) {
-        setQr({
-          status: "error",
-          qrImage: null,
-          message: data.error ?? "Could not load QR",
-        });
-        return;
-      }
-      setQr((prev) => {
-        const qrImage = data.qrImage ?? prev.qrImage;
-        const status =
-          data.status === "connected"
-            ? "connected"
-            : qrImage
-              ? "qr"
-              : data.status === "error"
-                ? "error"
-                : "waiting";
-        return {
-          status,
-          qrImage,
-          message: data.message ?? prev.message,
-        };
+      const res = await fetch(`/api/crm/connections/${accountId}/pair/qr`, {
+        credentials: "include",
       });
+      const data = await res.json();
+      if (!res.ok) return;
       if (data.status === "connected") {
+        setQr({
+          status: "connected",
+          qrImage: null,
+          message: data.message ?? "WhatsApp is linked.",
+        });
         toast.success("WhatsApp connected");
+        streamAbortRef.current?.abort();
         void load();
       }
     } catch {
-      setQr({ status: "error", qrImage: null, message: "Network error loading QR" });
+      /* ignore background status errors */
     }
   }, []);
 
@@ -92,20 +74,70 @@ export default function CrmConnectionsPage() {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+
     if (!pairingId) {
       setQr({ status: "idle", qrImage: null, message: "" });
       return;
     }
 
-    void fetchQr(pairingId, true, false);
+    setQr({
+      status: "loading",
+      qrImage: null,
+      message: "Starting QR stream from WALayer…",
+    });
+
+    const ac = new AbortController();
+    streamAbortRef.current = ac;
+
+    void consumeCrmPairStream(pairingId, ac.signal, {
+      onQr: (dataUrl) => {
+        setQr({
+          status: "qr",
+          qrImage: dataUrl,
+          message: "Scan with WhatsApp → Linked devices → Link a device.",
+        });
+      },
+      onConnected: () => {
+        setQr({
+          status: "connected",
+          qrImage: null,
+          message: "WhatsApp is linked for this number.",
+        });
+        toast.success("WhatsApp connected");
+        void load();
+      },
+      onError: (message) => {
+        setQr((prev) => ({
+          status: "error",
+          qrImage: prev.qrImage,
+          message,
+        }));
+      },
+    }).finally(() => {
+      if (!ac.signal.aborted) {
+        setQr((prev) =>
+          prev.qrImage
+            ? prev
+            : {
+                status: "waiting",
+                qrImage: null,
+                message: "Stream ended. Tap Refresh QR to try again.",
+              }
+        );
+      }
+    });
+
     pollRef.current = setInterval(() => {
-      void fetchQr(pairingId, false, true);
-    }, 5000);
+      void checkConnectionStatus(pairingId);
+    }, 4000);
 
     return () => {
+      ac.abort();
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [pairingId, fetchQr]);
+  }, [pairingId, streamGeneration, checkConnectionStatus]);
 
   async function createConnection() {
     const res = await fetch("/api/crm/connections", {
@@ -123,13 +155,24 @@ export default function CrmConnectionsPage() {
       return;
     }
     setLabel("");
+    setStreamGeneration((n) => n + 1);
     setPairingId(data.account.id);
     toast.success("Session created — loading QR…");
     void load();
   }
 
   function startReconnect(accountId: string) {
+    setStreamGeneration((n) => n + 1);
     setPairingId(accountId);
+  }
+
+  function refreshQrStream() {
+    setStreamGeneration((n) => n + 1);
+    setQr((prev) => ({
+      ...prev,
+      status: "loading",
+      message: "Refreshing QR…",
+    }));
   }
 
   return (
@@ -188,16 +231,19 @@ export default function CrmConnectionsPage() {
               <p className="text-lg font-medium text-emerald-400">Connected successfully</p>
             ) : null}
             {qr.status === "waiting" && !qr.qrImage ? (
-              <p className="text-amber-200">QR is generating… this page will refresh automatically.</p>
+              <p className="text-amber-200">QR is generating… keep this open or tap Refresh QR.</p>
             ) : null}
-            {qr.message ? <p className="max-w-md text-slate-400">{qr.message}</p> : null}
+            {qr.status === "error" && !qr.qrImage ? (
+              <p className="text-red-300">{qr.message}</p>
+            ) : null}
+            {qr.message && qr.status !== "error" ? (
+              <p className="max-w-md text-slate-400">{qr.message}</p>
+            ) : null}
+            {qr.status === "error" && qr.qrImage ? (
+              <p className="max-w-md text-amber-400">{qr.message}</p>
+            ) : null}
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => void fetchQr(pairingId, true)}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={refreshQrStream}>
                 Refresh QR
               </Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setPairingId(null)}>

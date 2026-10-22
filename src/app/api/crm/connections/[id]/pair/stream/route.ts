@@ -5,6 +5,7 @@ import { walayerPairStreamUrl, walayerStartPair } from "@/lib/walayer/client";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 /** Server-side proxy for WALayer QR pairing SSE — API key never sent to browser. */
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
@@ -22,7 +23,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       return new Response("Provider not configured", { status: 503 });
     }
 
-    await walayerStartPair(creds.apiKey, creds.apiBaseUrl, account.walayerSessionId);
+    const pair = await walayerStartPair(creds.apiKey, creds.apiBaseUrl, account.walayerSessionId);
 
     const url = walayerPairStreamUrl(creds.apiBaseUrl, account.walayerSessionId);
     const upstream = await fetch(url, {
@@ -31,7 +32,8 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     });
 
     if (!upstream.ok || !upstream.body) {
-      return new Response("Pair stream unavailable", { status: upstream.status || 502 });
+      const detail = pair.ok ? `stream HTTP ${upstream.status}` : pair.error;
+      return new Response(`Pair stream unavailable (${detail})`, { status: upstream.status || 502 });
     }
 
     return new Response(upstream.body, {

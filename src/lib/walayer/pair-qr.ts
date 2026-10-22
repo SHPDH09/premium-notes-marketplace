@@ -1,80 +1,30 @@
-/** Extract a base64 PNG or data-URL from WALayer pair / SSE payloads. */
+import {
+  deepFindQrMaterial,
+  parseQrMaterialFromSseEvent,
+  parseSseChunk,
+  sseEventIndicatesConnected,
+  type QrMaterial,
+} from "@/lib/walayer/pair-qr-parse";
+
+export {
+  deepFindQrMaterial,
+  looksLikeQrImage,
+  looksLikePairingCode,
+  parseQrMaterialFromSseEvent,
+  parseSseChunk,
+  sseEventIndicatesConnected,
+} from "@/lib/walayer/pair-qr-parse";
+
+/** @deprecated use deepFindQrMaterial */
 export function findQrImageInPayload(obj: unknown): string | null {
-  if (!obj || typeof obj !== "object") return null;
-  const o = obj as Record<string, unknown>;
-
-  for (const key of [
-    "qr",
-    "qr_code",
-    "qrcode",
-    "qr_image",
-    "qr_png",
-    "image",
-    "png",
-    "base64",
-    "data_url",
-    "dataUrl",
-  ]) {
-    const v = o[key];
-    if (typeof v === "string" && looksLikeQrImage(v)) return v;
-  }
-
-  const eventType = String(o.type ?? o.event ?? o.kind ?? "").toLowerCase();
-  if (eventType.includes("qr") && !eventType.includes("request")) {
-    for (const v of Object.values(o)) {
-      if (typeof v === "string" && looksLikeQrImage(v)) return v;
-    }
-  }
-
-  for (const nested of ["data", "frame", "payload", "body", "result"]) {
-    if (nested in o) {
-      const inner = findQrImageInPayload(o[nested]);
-      if (inner) return inner;
-    }
-  }
-  return null;
+  const m = deepFindQrMaterial(obj);
+  return m?.kind === "image" ? m.value : null;
 }
 
-/** WhatsApp pairing token (scan string), not a rendered PNG. */
+/** @deprecated use deepFindQrMaterial */
 export function findQrPairingCode(obj: unknown): string | null {
-  if (!obj || typeof obj !== "object") return null;
-  const o = obj as Record<string, unknown>;
-
-  for (const key of ["code", "pairing_code", "pairingCode", "token"]) {
-    const v = o[key];
-    if (typeof v === "string" && looksLikePairingCode(v)) return v.trim();
-  }
-
-  const eventType = String(o.type ?? o.event ?? "").toLowerCase();
-  if (eventType === "qr" || eventType.includes("qr_") || eventType.includes("qr.")) {
-    for (const key of ["code", "value", "text"]) {
-      const v = o[key];
-      if (typeof v === "string" && looksLikePairingCode(v)) return v.trim();
-    }
-  }
-
-  for (const nested of ["data", "frame", "payload", "body", "result"]) {
-    if (nested in o) {
-      const inner = findQrPairingCode(o[nested]);
-      if (inner) return inner;
-    }
-  }
-  return null;
-}
-
-function looksLikeQrImage(value: string): boolean {
-  const v = value.trim();
-  if (v.startsWith("data:image")) return true;
-  if (v.length >= 80 && /^[A-Za-z0-9+/=\s]+$/.test(v)) return true;
-  return false;
-}
-
-function looksLikePairingCode(value: string): boolean {
-  const v = value.trim();
-  if (v.length < 8 || v.length > 4096) return false;
-  if (v.startsWith("data:image")) return false;
-  if (looksLikeQrImage(v)) return false;
-  return true;
+  const m = deepFindQrMaterial(obj);
+  return m?.kind === "code" ? m.value : null;
 }
 
 export function qrToDataUrl(raw: string): string {
@@ -83,15 +33,15 @@ export function qrToDataUrl(raw: string): string {
   return `data:image/png;base64,${trimmed.replace(/^data:image\/\w+;base64,/, "")}`;
 }
 
-/** Render WALayer QR token or pass through an image payload as a data URL. */
+export async function materialToDataUrl(material: QrMaterial): Promise<string> {
+  if (material.kind === "image") return qrToDataUrl(material.value);
+  return pairingCodeToDataUrl(material.value);
+}
+
 export async function qrPayloadToDataUrl(obj: unknown): Promise<string | null> {
-  const image = findQrImageInPayload(obj);
-  if (image) return qrToDataUrl(image);
-
-  const code = findQrPairingCode(obj);
-  if (!code) return null;
-
-  return pairingCodeToDataUrl(code);
+  const material = deepFindQrMaterial(obj);
+  if (!material) return null;
+  return materialToDataUrl(material);
 }
 
 export async function pairingCodeToDataUrl(code: string): Promise<string> {
@@ -99,46 +49,14 @@ export async function pairingCodeToDataUrl(code: string): Promise<string> {
   return QRCode.toDataURL(code, { errorCorrectionLevel: "M", margin: 2, width: 320 });
 }
 
-/** SSE / pair stream may return a PNG blob or a WhatsApp scan string. */
-export async function sseQrRawToDataUrl(raw: string): Promise<string | null> {
-  const trimmed = raw.trim();
-  if (looksLikeQrImage(trimmed)) return qrToDataUrl(trimmed);
-  if (looksLikePairingCode(trimmed)) return pairingCodeToDataUrl(trimmed);
-  return null;
-}
-
-export function parseSseChunk(buffer: string): { events: string[]; rest: string } {
-  const parts = buffer.split("\n\n");
-  const rest = parts.pop() ?? "";
-  return { events: parts, rest };
-}
-
-export function parseQrFromSseEvent(block: string): string | null {
-  const lines = block.split("\n");
-  let dataLine = "";
-  for (const line of lines) {
-    if (line.startsWith("data:")) {
-      dataLine += line.slice(5).trim();
-    }
-  }
-  if (!dataLine) return null;
-  if (dataLine === "[DONE]" || dataLine === "ping") return null;
-  try {
-    const json = JSON.parse(dataLine) as unknown;
-    const image = findQrImageInPayload(json);
-    if (image) return image;
-    return findQrPairingCode(json);
-  } catch {
-    if (dataLine.length > 80 && /^[A-Za-z0-9+/=]+$/.test(dataLine)) return dataLine;
-    if (looksLikePairingCode(dataLine)) return dataLine.trim();
-    return null;
-  }
-}
-
-export async function readQrFromEventStream(
+export async function watchQrEventStream(
   body: ReadableStream<Uint8Array>,
-  timeoutMs = 25000
-): Promise<string | null> {
+  handlers: {
+    onQr: (dataUrl: string) => void | Promise<void>;
+    onConnected?: () => void | Promise<void>;
+  },
+  timeoutMs = 120000
+): Promise<void> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -150,18 +68,36 @@ export async function readQrFromEventStream(
     buffer += decoder.decode(value, { stream: true });
     const { events, rest } = parseSseChunk(buffer);
     buffer = rest;
+
     for (const ev of events) {
-      const qrRaw = parseQrFromSseEvent(ev);
-      if (qrRaw) {
+      if (sseEventIndicatesConnected(ev)) {
+        await handlers.onConnected?.();
         reader.cancel().catch(() => {});
-        return sseQrRawToDataUrl(qrRaw);
+        return;
       }
-      if (ev.includes("connected") || ev.includes("paired")) {
-        reader.cancel().catch(() => {});
-        return null;
+      const material = parseQrMaterialFromSseEvent(ev);
+      if (material) {
+        const dataUrl = await materialToDataUrl(material);
+        await handlers.onQr(dataUrl);
       }
     }
   }
   reader.cancel().catch(() => {});
-  return null;
+}
+
+export async function readQrFromEventStream(
+  body: ReadableStream<Uint8Array>,
+  timeoutMs = 25000
+): Promise<string | null> {
+  let last: string | null = null;
+  await watchQrEventStream(
+    body,
+    {
+      onQr: (dataUrl) => {
+        last = dataUrl;
+      },
+    },
+    timeoutMs
+  );
+  return last;
 }
