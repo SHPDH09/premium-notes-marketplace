@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireCompanyMember } from "@/lib/crm/auth";
 import { withCrmJson } from "@/lib/crm/api-route";
 import { getWalayerPlatformCredentials } from "@/lib/crm/platform-settings";
-import {
-  findQrImageInPayload,
-  qrToDataUrl,
-  readQrFromEventStream,
-} from "@/lib/walayer/pair-qr";
+import { qrPayloadToDataUrl, readQrFromEventStream } from "@/lib/walayer/pair-qr";
 import {
   walayerGetSession,
   walayerPairStreamUrl,
@@ -68,38 +64,16 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
       });
     }
 
-    const walayerSession = await walayerGetSession(
-      creds.apiKey,
-      creds.apiBaseUrl,
-      account.walayerSessionId
-    );
-    if (walayerSession.ok && walayerSession.data && typeof walayerSession.data === "object") {
-      const s = walayerSession.data as Record<string, unknown>;
-      const state = String(s.status ?? s.state ?? s.connection_status ?? "").toLowerCase();
-      if (state.includes("connected") || state.includes("paired") || state === "open") {
-        await prisma.crmWhatsAppAccount.update({
-          where: { id: account.id },
-          data: { status: "CONNECTED", statusMessage: null, lastConnectedAt: new Date() },
-        });
+    const pair = await walayerStartPair(creds.apiKey, creds.apiBaseUrl, account.walayerSessionId);
+    if (pair.ok) {
+      const fromPost =
+        (await qrPayloadToDataUrl(pair.data)) ?? (await qrPayloadToDataUrl(pair.raw));
+      if (fromPost) {
         return NextResponse.json({
-          status: "connected",
-          qrImage: null,
-          message: "WhatsApp is linked for this number.",
+          status: "qr",
+          qrImage: fromPost,
+          message: "Scan with WhatsApp → Linked devices → Link a device.",
         });
-      }
-    }
-
-    if (refresh || account.status !== "CONNECTING") {
-      const pair = await walayerStartPair(creds.apiKey, creds.apiBaseUrl, account.walayerSessionId);
-      if (pair.ok) {
-        const fromPost = findQrImageInPayload(pair.data) ?? findQrImageInPayload(pair.raw);
-        if (fromPost) {
-          return NextResponse.json({
-            status: "qr",
-            qrImage: qrToDataUrl(fromPost),
-            message: "Scan with WhatsApp → Linked devices → Link a device.",
-          });
-        }
       }
     }
 
@@ -123,11 +97,11 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
       );
     }
 
-    const qrRaw = await readQrFromEventStream(upstream.body, 28000);
-    if (qrRaw) {
+    const qrImage = await readQrFromEventStream(upstream.body, 28000);
+    if (qrImage) {
       return NextResponse.json({
         status: "qr",
-        qrImage: qrToDataUrl(qrRaw),
+        qrImage,
         message: "Scan with WhatsApp → Linked devices → Link a device.",
       });
     }

@@ -40,8 +40,12 @@ export default function CrmConnectionsPage() {
     if (res.ok) setAccounts(data.accounts ?? []);
   }
 
-  const fetchQr = useCallback(async (accountId: string, refresh = false) => {
-    setQr((s) => ({ ...s, status: "loading", message: "Fetching QR…" }));
+  const fetchQr = useCallback(async (accountId: string, refresh = false, silent = false) => {
+    setQr((s) =>
+      silent && s.qrImage
+        ? s
+        : { ...s, status: "loading", message: refresh ? "Fetching QR…" : s.message }
+    );
     try {
       const url = `/api/crm/connections/${accountId}/pair/qr${refresh ? "?refresh=1" : ""}`;
       const res = await fetch(url, { credentials: "include" });
@@ -93,10 +97,10 @@ export default function CrmConnectionsPage() {
       return;
     }
 
-    void fetchQr(pairingId, true);
+    void fetchQr(pairingId, true, false);
     pollRef.current = setInterval(() => {
-      void fetchQr(pairingId, false);
-    }, 4000);
+      void fetchQr(pairingId, false, true);
+    }, 5000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -171,8 +175,10 @@ export default function CrmConnectionsPage() {
       {pairingId ? (
         <Card className="border-emerald-900/50 bg-slate-900">
           <CardContent className="flex flex-col items-center gap-4 pt-6 text-center text-sm text-slate-300">
-            {qr.status === "loading" ? <BrandLoading message="Loading QR code…" /> : null}
-            {qr.status === "qr" && qr.qrImage ? (
+            {qr.status === "loading" && !qr.qrImage ? (
+              <BrandLoading message="Loading QR code…" />
+            ) : null}
+            {qr.qrImage ? (
               <div className="rounded-xl bg-white p-4 shadow-lg">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qr.qrImage} alt="WhatsApp QR code" className="h-64 w-64 object-contain" />
