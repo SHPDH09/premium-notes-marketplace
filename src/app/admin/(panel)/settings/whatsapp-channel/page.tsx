@@ -13,6 +13,7 @@ type Settings = {
   enabled: boolean;
   provider: string;
   apiBaseUrl: string;
+  sessionId: string;
   channelId: string;
   hasApiKey: boolean;
 };
@@ -35,8 +36,9 @@ export default function WhatsAppChannelSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([]);
   const [enabled, setEnabled] = useState(false);
+  const [sessionId, setSessionId] = useState("");
   const [channelId, setChannelId] = useState("");
-  const [apiBaseUrl, setApiBaseUrl] = useState("https://api.wapito.com/v1");
+  const [apiBaseUrl, setApiBaseUrl] = useState("https://api.walayer.com/v1");
   const [apiKey, setApiKey] = useState("");
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
@@ -53,8 +55,9 @@ export default function WhatsAppChannelSettingsPage() {
     setRecentPosts(data.recentPosts ?? []);
     setNote(data.note ?? "");
     setEnabled(!!data.settings?.enabled);
+    setSessionId(data.settings?.sessionId ?? "");
     setChannelId(data.settings?.channelId ?? "");
-    setApiBaseUrl(data.settings?.apiBaseUrl ?? "https://api.wapito.com/v1");
+    setApiBaseUrl(data.settings?.apiBaseUrl ?? "https://api.walayer.com/v1");
     setLoading(false);
   }
 
@@ -72,6 +75,7 @@ export default function WhatsAppChannelSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           enabled,
+          sessionId,
           channelId,
           apiBaseUrl,
           ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
@@ -98,6 +102,7 @@ export default function WhatsAppChannelSettingsPage() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           apiBaseUrl,
           ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
         }),
@@ -148,7 +153,7 @@ export default function WhatsAppChannelSettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Wapito</CardTitle>
+          <CardTitle>WALayer</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={save} className="space-y-4">
@@ -167,8 +172,21 @@ export default function WhatsAppChannelSettingsPage() {
                 id="wa-api-base"
                 value={apiBaseUrl}
                 onChange={(e) => setApiBaseUrl(e.target.value)}
-                placeholder="https://api.wapito.com/v1"
+                placeholder="https://api.walayer.com/v1"
               />
+            </div>
+            <div>
+              <Label htmlFor="wa-session-id">Session ID</Label>
+              <Input
+                id="wa-session-id"
+                value={sessionId}
+                onChange={(e) => setSessionId(e.target.value)}
+                placeholder="sess_01j…"
+                required
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                The linked WhatsApp number session from your WALayer dashboard (Sessions → copy id).
+              </p>
             </div>
             <div>
               <Label htmlFor="wa-channel-id">Channel ID (newsletter JID)</Label>
@@ -180,14 +198,14 @@ export default function WhatsAppChannelSettingsPage() {
                 required
               />
               <p className="mt-1 text-xs text-slate-500">
-                From Wapito dashboard — newsletter JID ending in <code>@newsletter</code>.{" "}
+                Newsletter JID ending in <code>@newsletter</code> (listed under Channels for your session).{" "}
                 <a
-                  href="https://wapito.com/docs/getting-started/"
+                  href="https://walayer.com/docs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-indigo-600 underline"
                 >
-                  Wapito setup guide
+                  WALayer API docs
                 </a>
               </p>
             </div>
@@ -198,7 +216,7 @@ export default function WhatsAppChannelSettingsPage() {
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={settings?.hasApiKey ? "Saved — enter only to replace" : "wpt_…"}
+                placeholder={settings?.hasApiKey ? "Saved — enter only to replace" : "wsk_live_…"}
                 autoComplete="off"
               />
             </div>

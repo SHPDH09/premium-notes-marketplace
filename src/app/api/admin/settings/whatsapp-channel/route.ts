@@ -25,6 +25,7 @@ export async function GET() {
         enabled: row.enabled,
         provider: row.provider,
         apiBaseUrl: row.apiBaseUrl,
+        sessionId: row.sessionId ?? "",
         channelId: row.channelId ?? "",
         hasApiKey: !!row.apiKeyEnc,
       },
@@ -39,13 +40,14 @@ export async function GET() {
         updatedAt: p.updatedAt.toISOString(),
       })),
       note:
-        "Uses Wapito (https://wapito.com) — POST /v1/messages/text to your Channel newsletter JID (@newsletter). Not Meta Cloud API.",
+        "Uses WALayer (https://walayer.com) — posts via your linked session to the channel newsletter JID (@newsletter). Not Meta Cloud API.",
     });
   });
 }
 
 const patchSchema = z.object({
   enabled: z.boolean(),
+  sessionId: z.string().min(3),
   channelId: z.string().min(5),
   apiKey: z.string().min(8).optional(),
   apiBaseUrl: z.string().url().optional(),
@@ -65,6 +67,7 @@ export async function PATCH(req: NextRequest) {
 
     await saveWhatsAppChannelSettings({
       enabled: parsed.data.enabled,
+      sessionId: parsed.data.sessionId,
       channelId: parsed.data.channelId,
       apiKey: parsed.data.apiKey,
       apiBaseUrl: parsed.data.apiBaseUrl,
@@ -76,6 +79,7 @@ export async function PATCH(req: NextRequest) {
         enabled: row.enabled,
         provider: row.provider,
         apiBaseUrl: row.apiBaseUrl,
+        sessionId: row.sessionId ?? "",
         channelId: row.channelId ?? "",
         hasApiKey: !!row.apiKeyEnc,
       },

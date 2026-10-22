@@ -3,7 +3,7 @@ import { isJobLiveOnPublicBoard } from "@/lib/placement/job-board-visible";
 import { generateWhatsAppJobMessage } from "@/lib/placement/generate-whatsapp-job-message";
 import { prisma } from "@/lib/db";
 import { getWhatsAppChannelConfig } from "@/lib/whatsapp-channel/settings";
-import { wapitoSendChannelMessage } from "@/lib/whatsapp-channel/wapito-provider";
+import { walayerSendChannelMessage } from "@/lib/whatsapp-channel/walayer-provider";
 
 export type PublishJobWhatsAppResult =
   | { skipped: true; reason: string }
@@ -32,32 +32,35 @@ export async function publishJobToWhatsAppChannel(jobId: string): Promise<Publis
   const postRow = existing
     ? await prisma.jobWhatsAppChannelPost.update({
         where: { id: existing.id },
-        data: { status: "PENDING", provider: "wapito", errorMessage: null },
+        data: { status: "PENDING", provider: "walayer", errorMessage: null },
       })
     : await prisma.jobWhatsAppChannelPost.create({
         data: {
           jobId,
           status: "PENDING",
-          provider: "wapito",
+          provider: "walayer",
         },
       });
 
   const { message } = await generateWhatsAppJobMessage(job, brand.website);
 
-  const provider = config.provider === "wapio" ? "wapito" : config.provider;
-  if (provider !== "wapito") {
+  const provider =
+    config.provider === "wapito" || config.provider === "wapio" ? "walayer" : config.provider;
+  if (provider !== "walayer") {
     await prisma.jobWhatsAppChannelPost.update({
       where: { id: postRow.id },
       data: { status: "FAILED", errorMessage: `Unsupported provider: ${config.provider}` },
     });
-    return { ok: false, error: `Unsupported provider: ${config.provider}. Use Wapito.` };
+    return { ok: false, error: `Unsupported provider: ${config.provider}. Use WALayer.` };
   }
 
-  const sendResult = await wapitoSendChannelMessage({
+  const sendResult = await walayerSendChannelMessage({
     apiBaseUrl: config.apiBaseUrl,
     apiKey: config.apiKey,
+    sessionId: config.sessionId,
     channelId: config.channelId,
     text: message,
+    idempotencyKey: `tl-job-${jobId}`,
   });
 
   if (!sendResult.ok) {

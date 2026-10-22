@@ -924,8 +924,9 @@ model PlacedStudent {
 model WhatsAppChannelSettings {
   id         String   @id @default("default")
   enabled    Boolean  @default(false)
-  provider   String   @default("wapito")
-  apiBaseUrl String   @default("https://api.wapito.com/v1") @map("api_base_url")
+  provider   String   @default("walayer")
+  apiBaseUrl String   @default("https://api.walayer.com/v1") @map("api_base_url")
+  sessionId  String?  @map("session_id")
   channelId  String?  @map("channel_id")
   apiKeyEnc  String?  @map("api_key_enc") @db.Text
   updatedAt  DateTime @updatedAt @map("updated_at")
@@ -937,7 +938,7 @@ model JobWhatsAppChannelPost {
   id           String                    @id @default(cuid())
   jobId        String                    @unique @map("job_id")
   status       WhatsAppChannelPostStatus @default(PENDING)
-  provider     String                    @default("wapito")
+  provider     String                    @default("walayer")
   errorMessage String?                   @map("error_message") @db.Text
   postedAt     DateTime?                 @map("posted_at")
   createdAt    DateTime                  @default(now()) @map("created_at")

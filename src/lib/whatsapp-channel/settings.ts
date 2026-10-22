@@ -28,13 +28,14 @@ export function decryptWhatsAppApiKey(apiKeyEnc: string | null | undefined): str
 
 export async function getWhatsAppChannelConfig() {
   const row = await getWhatsAppChannelSettingsRecord();
-  if (!row?.enabled || !row.channelId?.trim()) return null;
+  if (!row?.enabled || !row.channelId?.trim() || !row.sessionId?.trim()) return null;
   const apiKey = decryptWhatsAppApiKey(row.apiKeyEnc);
   if (!apiKey) return null;
   return {
     enabled: true,
     provider: row.provider,
     apiBaseUrl: row.apiBaseUrl,
+    sessionId: row.sessionId.trim(),
     channelId: row.channelId.trim(),
     apiKey,
   };
@@ -42,6 +43,7 @@ export async function getWhatsAppChannelConfig() {
 
 export async function saveWhatsAppChannelSettings(input: {
   enabled: boolean;
+  sessionId: string;
   channelId: string;
   apiKey?: string;
   apiBaseUrl?: string;
@@ -49,11 +51,15 @@ export async function saveWhatsAppChannelSettings(input: {
   await ensureWhatsAppChannelSettings();
   const data: {
     enabled: boolean;
+    provider: string;
+    sessionId: string;
     channelId: string;
     apiBaseUrl?: string;
     apiKeyEnc?: string;
   } = {
     enabled: input.enabled,
+    provider: "walayer",
+    sessionId: input.sessionId.trim(),
     channelId: input.channelId.trim(),
   };
   if (input.apiBaseUrl?.trim()) {
