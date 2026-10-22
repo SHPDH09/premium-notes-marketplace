@@ -29,6 +29,17 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       data: { unreadCount: 0 },
     });
 
+    const assignments = await prisma.crmConversationAssignment.findMany({
+      where: { conversationId: conv.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: {
+        fromMember: { include: { user: { select: { name: true } } } },
+        toMember: { include: { user: { select: { name: true } } } },
+        assignedBy: { include: { user: { select: { name: true } } } },
+      },
+    });
+
     return NextResponse.json({
       conversation: {
         ...serializeConversation(conv),
@@ -38,6 +49,14 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
           ? { id: conv.assignedMember.id, name: conv.assignedMember.user.name }
           : null,
         tags: conv.conversationTags.map((t) => t.tag),
+        assignmentHistory: assignments.map((a) => ({
+          id: a.id,
+          createdAt: a.createdAt.toISOString(),
+          note: a.note,
+          from: a.fromMember?.user.name ?? null,
+          to: a.toMember?.user.name ?? null,
+          by: a.assignedBy?.user.name ?? null,
+        })),
       },
     });
   });
