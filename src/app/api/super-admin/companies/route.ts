@@ -12,22 +12,45 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       include: {
         subscriptionPlan: true,
-        _count: { select: { members: true, whatsappAccounts: true, conversations: true } },
+        _count: { select: { members: true, whatsappAccounts: true, conversations: true, contacts: true } },
       },
     });
-    return NextResponse.json({
-      companies: rows.map((c) => ({
-        id: c.id,
-        name: c.name,
-        slug: c.slug,
-        status: c.status,
-        plan: c.subscriptionPlan?.name ?? null,
-        expiresAt: c.subscriptionExpiresAt?.toISOString() ?? null,
-        members: c._count.members,
-        numbers: c._count.whatsappAccounts,
-        conversations: c._count.conversations,
-      })),
-    });
+
+    const companies = await Promise.all(
+      rows.map(async (c) => {
+        const [messagesInbound, messagesOutbound, activeAgents] = await Promise.all([
+          prisma.crmMessage.count({
+            where: { conversation: { companyId: c.id }, direction: "INBOUND" },
+          }),
+          prisma.crmMessage.count({
+            where: { conversation: { companyId: c.id }, direction: "OUTBOUND" },
+          }),
+          prisma.crmCompanyMember.count({
+            where: { companyId: c.id, isActive: true },
+          }),
+        ]);
+        return {
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          status: c.status,
+          plan: c.subscriptionPlan?.name ?? null,
+          planId: c.subscriptionPlanId,
+          expiresAt: c.subscriptionExpiresAt?.toISOString() ?? null,
+          createdAt: c.createdAt.toISOString(),
+          agents: c._count.members,
+          activeAgents,
+          whatsappNumbers: c._count.whatsappAccounts,
+          conversations: c._count.conversations,
+          contacts: c._count.contacts,
+          messagesInbound,
+          messagesOutbound,
+          messagesTotal: messagesInbound + messagesOutbound,
+        };
+      })
+    );
+
+    return NextResponse.json({ companies });
   });
 }
 
