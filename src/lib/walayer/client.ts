@@ -60,13 +60,18 @@ export async function walayerRequest<T = unknown>(params: {
   }
 }
 
-export async function walayerCreateSession(apiKey: string, apiBaseUrl: string | undefined, label: string) {
+/** WALayer requires ISO 3166-1 alpha-2 `country` when creating a session. */
+export async function walayerCreateSession(
+  apiKey: string,
+  apiBaseUrl: string | undefined,
+  input: { label: string; country: string }
+) {
   return walayerRequest<{ id: string }>({
     apiKey,
     apiBaseUrl,
     path: "/sessions",
     method: "POST",
-    body: { label },
+    body: { label: input.label, country: input.country.toUpperCase() },
   });
 }
 
