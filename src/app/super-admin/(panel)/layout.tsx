@@ -7,6 +7,7 @@ const nav = [
   { href: "/super-admin", label: "Dashboard" },
   { href: "/super-admin/companies", label: "Companies" },
   { href: "/super-admin/plans", label: "Plans" },
+  { href: "/super-admin/reports", label: "Reports" },
   { href: "/super-admin/settings", label: "WALayer & webhooks" },
 ];
 
