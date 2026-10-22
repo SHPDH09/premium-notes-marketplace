@@ -1,9 +1,18 @@
--- Inbox agent visibility, campaigns, subscription billing
+-- Inbox agent visibility, campaigns, subscription billing (idempotent)
 
-CREATE TYPE "CrmSubscriptionStatus" AS ENUM ('TRIAL', 'ACTIVE', 'PAYMENT_PENDING', 'PAST_DUE', 'EXPIRED', 'CANCELLED');
+DO $$ BEGIN
+  CREATE TYPE "CrmSubscriptionStatus" AS ENUM (
+    'TRIAL', 'ACTIVE', 'PAYMENT_PENDING', 'PAST_DUE', 'EXPIRED', 'CANCELLED'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TYPE "CrmBillingInterval" ADD VALUE IF NOT EXISTS 'QUARTERLY';
-ALTER TYPE "CrmBillingInterval" ADD VALUE IF NOT EXISTS 'HALF_YEARLY';
+DO $$ BEGIN
+  CREATE TYPE "CrmCampaignRecipientStatus" AS ENUM (
+    'PENDING', 'QUEUED', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'SKIPPED', 'OPTED_OUT'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TABLE "crm_companies" ADD COLUMN IF NOT EXISTS "agents_can_view_unassigned_chats" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE "crm_companies" ADD COLUMN IF NOT EXISTS "subscription_status" "CrmSubscriptionStatus" NOT NULL DEFAULT 'TRIAL';
@@ -33,21 +42,33 @@ WHERE "id" IN (
   JOIN "crm_subscription_plans" p2 ON p1."plan_code" = p2."plan_code" AND p1."id" <> p2."id"
 );
 
-ALTER TABLE "crm_subscription_plans" ALTER COLUMN "plan_code" SET NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'crm_subscription_plans' AND column_name = 'plan_code'
+  ) THEN
+    IF NOT EXISTS (SELECT 1 FROM "crm_subscription_plans" WHERE "plan_code" IS NULL) THEN
+      ALTER TABLE "crm_subscription_plans" ALTER COLUMN "plan_code" SET NOT NULL;
+    END IF;
+  END IF;
+END $$;
+
 CREATE UNIQUE INDEX IF NOT EXISTS "crm_subscription_plans_plan_code_key" ON "crm_subscription_plans"("plan_code");
 
 ALTER TABLE "crm_campaign_recipients" ADD COLUMN IF NOT EXISTS "contact_id" TEXT;
 ALTER TABLE "crm_campaign_recipients" ADD COLUMN IF NOT EXISTS "provider_message_id" TEXT;
 ALTER TABLE "crm_campaign_recipients" ADD COLUMN IF NOT EXISTS "sent_at" TIMESTAMP(3);
 
--- Migrate recipient status to enum if still text
 DO $$
 BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'crm_campaign_recipients' AND column_name = 'status' AND udt_name = 'text'
+    WHERE table_schema = 'public' AND table_name = 'crm_campaign_recipients'
+      AND column_name = 'status' AND udt_name = 'text'
   ) THEN
     ALTER TABLE "crm_campaign_recipients"
+      ALTER COLUMN "status" DROP DEFAULT,
       ALTER COLUMN "status" TYPE "CrmCampaignRecipientStatus"
       USING (
         CASE LOWER("status")
@@ -60,7 +81,8 @@ BEGIN
           WHEN 'queued' THEN 'QUEUED'::"CrmCampaignRecipientStatus"
           ELSE 'PENDING'::"CrmCampaignRecipientStatus"
         END
-      );
+      ),
+      ALTER COLUMN "status" SET DEFAULT 'PENDING'::"CrmCampaignRecipientStatus";
   END IF;
 END $$;
 
@@ -96,11 +118,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS "crm_subscription_orders_idempotency_key_key" 
 CREATE INDEX IF NOT EXISTS "crm_subscription_orders_company_id_created_at_idx" ON "crm_subscription_orders"("company_id", "created_at");
 CREATE INDEX IF NOT EXISTS "crm_subscription_history_company_id_created_at_idx" ON "crm_subscription_history"("company_id", "created_at");
 
-ALTER TABLE "crm_subscription_orders" ADD CONSTRAINT "crm_subscription_orders_company_id_fkey"
-  FOREIGN KEY ("company_id") REFERENCES "crm_companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "crm_subscription_orders" ADD CONSTRAINT "crm_subscription_orders_plan_id_fkey"
-  FOREIGN KEY ("plan_id") REFERENCES "crm_subscription_plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "crm_subscription_history" ADD CONSTRAINT "crm_subscription_history_company_id_fkey"
-  FOREIGN KEY ("company_id") REFERENCES "crm_companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "crm_subscription_history" ADD CONSTRAINT "crm_subscription_history_plan_id_fkey"
-  FOREIGN KEY ("plan_id") REFERENCES "crm_subscription_plans"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "crm_subscription_orders" ADD CONSTRAINT "crm_subscription_orders_company_id_fkey"
+    FOREIGN KEY ("company_id") REFERENCES "crm_companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "crm_subscription_orders" ADD CONSTRAINT "crm_subscription_orders_plan_id_fkey"
+    FOREIGN KEY ("plan_id") REFERENCES "crm_subscription_plans"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "crm_subscription_history" ADD CONSTRAINT "crm_subscription_history_company_id_fkey"
+    FOREIGN KEY ("company_id") REFERENCES "crm_companies"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "crm_subscription_history" ADD CONSTRAINT "crm_subscription_history_plan_id_fkey"
+    FOREIGN KEY ("plan_id") REFERENCES "crm_subscription_plans"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
