@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,12 @@ export default function CrmAgentsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-white">Agents</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold text-white">Agents</h1>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/crm/calls">Calls workspace</Link>
+        </Button>
+      </div>
       <form onSubmit={addAgent} className="mt-4 grid max-w-lg gap-2">
         <Input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-slate-900" />
         <Input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="bg-slate-900" />

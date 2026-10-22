@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
-  handleWalayerCallReceived,
+  handleWalayerCallEvent,
   handleWalayerMessageReceived,
   handleWalayerSessionLifecycle,
 } from "@/lib/crm/inbound";
@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
   try {
     if (event === "message.received" && sessionId) {
       await handleWalayerMessageReceived(sessionId, data as Record<string, unknown>);
-    } else if (event === "call.received" && sessionId) {
-      await handleWalayerCallReceived(sessionId, data);
+    } else if (event.startsWith("call.") && sessionId) {
+      await handleWalayerCallEvent(sessionId, event, data);
     } else if (event.startsWith("session.") && sessionId) {
       await handleWalayerSessionLifecycle(sessionId, event);
     }

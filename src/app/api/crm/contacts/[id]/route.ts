@@ -4,6 +4,7 @@ import { requireCompanyMember } from "@/lib/crm/auth";
 import { withCrmJson } from "@/lib/crm/api-route";
 import { canEditContact, canManageContacts } from "@/lib/crm/contacts/permissions";
 import { serializeContactListItem } from "@/lib/crm/contacts/serialize";
+import { serializeCallRow } from "@/lib/crm/calls/serialize";
 import { isValidEmail, normalizePhoneInput } from "@/lib/crm/phone";
 import { prisma } from "@/lib/db";
 
@@ -53,6 +54,17 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
 
     const campaigns: unknown[] = [];
 
+    const recentCalls = await prisma.crmCallRecord.findMany({
+      where: { companyId: session.companyId, contactId: contact.id },
+      orderBy: { startedAt: "desc" },
+      take: 15,
+      include: {
+        contact: { select: { id: true, name: true, phone: true } },
+        assignedMember: { include: { user: { select: { name: true } } } },
+        conversation: { select: { id: true } },
+      },
+    });
+
     return NextResponse.json({
       contact: {
         ...serializeContactListItem({
@@ -68,6 +80,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
           consentSource: contact.consentSource,
           optedOutAt: contact.optedOutAt?.toISOString() ?? null,
         },
+        recentCalls: recentCalls.map((c) => serializeCallRow(c)),
         conversations: contact.conversations.map((cv) => ({
           id: cv.id,
           status: cv.status,

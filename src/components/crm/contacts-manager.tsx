@@ -37,7 +37,13 @@ type Tag = { id: string; name: string; color: string };
 type Member = { id: string; name: string };
 type Segment = { id: string; name: string; count: number; builtin?: boolean };
 
-export function ContactsManager({ isAdmin }: { isAdmin: boolean }) {
+export function ContactsManager({
+  isAdmin,
+  initialAddPhone,
+}: {
+  isAdmin: boolean;
+  initialAddPhone?: string;
+}) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -66,6 +72,13 @@ export function ContactsManager({ isAdmin }: { isAdmin: boolean }) {
   const [importCsv, setImportCsv] = useState("");
   const [importJobId, setImportJobId] = useState<string | null>(null);
   const [importSummary, setImportSummary] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialAddPhone?.trim()) {
+      setForm((f) => ({ ...f, phone: initialAddPhone.trim() }));
+      setModal("add");
+    }
+  }, [initialAddPhone]);
 
   const loadMeta = useCallback(async () => {
     const [st, tg, mem, seg] = await Promise.all([

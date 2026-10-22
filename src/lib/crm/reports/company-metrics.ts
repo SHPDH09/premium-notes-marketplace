@@ -344,21 +344,35 @@ export async function buildCampaignReports(f: CompanyReportFilters) {
 
 export async function buildCallReports(f: CompanyReportFilters) {
   const where = { companyId: f.companyId, startedAt: { gte: f.from, lte: f.to } };
-  const [total, missed, rejected, ringing] = await Promise.all([
-    prisma.crmCallRecord.count({ where }),
-    prisma.crmCallRecord.count({ where: { ...where, status: "MISSED" } }),
-    prisma.crmCallRecord.count({ where: { ...where, status: "REJECTED" } }),
-    prisma.crmCallRecord.count({ where: { ...where, status: "RINGING" } }),
-  ]);
+  const [total, missed, rejected, ringing, answered, inbound, outbound, durationAgg] =
+    await Promise.all([
+      prisma.crmCallRecord.count({ where }),
+      prisma.crmCallRecord.count({ where: { ...where, status: "MISSED" } }),
+      prisma.crmCallRecord.count({ where: { ...where, status: "REJECTED" } }),
+      prisma.crmCallRecord.count({ where: { ...where, status: "RINGING" } }),
+      prisma.crmCallRecord.count({ where: { ...where, status: "ANSWERED" } }),
+      prisma.crmCallRecord.count({ where: { ...where, direction: "INBOUND" } }),
+      prisma.crmCallRecord.count({ where: { ...where, direction: "OUTBOUND" } }),
+      prisma.crmCallRecord.aggregate({
+        where: { ...where, durationSec: { not: null } },
+        _avg: { durationSec: true },
+        _sum: { durationSec: true },
+      }),
+    ]);
 
   return {
     available: true,
-    note: "WALayer supports incoming call events and reject only — no outgoing call API.",
+    note: "WALayer supports incoming call events and reject only — no outgoing WhatsApp call API.",
     total,
+    inbound,
+    outbound,
     missed,
     rejected,
     ringing,
-    answered: await prisma.crmCallRecord.count({ where: { ...where, status: "ANSWERED" } }),
-    avgDurationSec: null as number | null,
+    answered,
+    failed: await prisma.crmCallRecord.count({ where: { ...where, status: "FAILED" } }),
+    totalDurationSec: durationAgg._sum.durationSec ?? 0,
+    avgDurationSec:
+      durationAgg._avg.durationSec != null ? Math.round(durationAgg._avg.durationSec) : null,
   };
 }

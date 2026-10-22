@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { CallActionButton } from "@/components/crm/call-action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,6 +72,7 @@ export default function ContactDetailPage() {
           <p className="text-sm text-slate-400">{String(contact.phone)}</p>
         </div>
         <div className="flex gap-2">
+          <CallActionButton contactId={params.id} phone={String(contact.phone)} conversationId={primaryConv?.id} />
           {primaryConv?.id ? (
             <Button asChild>
               <Link href={`/crm/inbox?conversation=${primaryConv.id}`}>Open chat</Link>
@@ -157,6 +159,31 @@ export default function ContactDetailPage() {
           {!((contact.tags as unknown[]) ?? []).length ? (
             <span className="text-sm text-slate-500">No tags</span>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-800 bg-slate-900">
+        <CardHeader>
+          <CardTitle className="text-white">Recent calls</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {((contact.recentCalls as Record<string, unknown>[]) ?? []).length === 0 ? (
+            <p className="text-sm text-slate-500">No call history linked to this contact yet.</p>
+          ) : (
+            ((contact.recentCalls as Record<string, unknown>[]) ?? []).map((call) => (
+              <div key={String(call.id)} className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-800 px-3 py-2 text-sm">
+                <div>
+                  <p className="text-slate-200">
+                    {String(call.direction)} · {String(call.status)}
+                  </p>
+                  <p className="text-xs text-slate-500">{new Date(String(call.startedAt)).toLocaleString()}</p>
+                </div>
+                <Link href="/crm/calls" className="text-xs text-emerald-400 hover:underline">
+                  View in Calls
+                </Link>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 

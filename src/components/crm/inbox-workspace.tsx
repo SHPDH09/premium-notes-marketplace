@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CallActionButton } from "@/components/crm/call-action-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -441,6 +442,13 @@ export function InboxWorkspace({
               </p>
             </div>
             <div className="flex flex-wrap gap-1">
+              {detail?.contact ? (
+                <CallActionButton
+                  contactId={detail.contact.id}
+                  conversationId={selectedId ?? undefined}
+                  phone={detail.contact.phone}
+                />
+              ) : null}
               {!detail?.assignee && memberId ? (
                 <Button size="sm" variant="outline" onClick={() => void assignTo(memberId)}>
                   Take chat
