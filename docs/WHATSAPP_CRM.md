@@ -12,11 +12,15 @@
 | `/admin/login` | Marketplace `ADMIN` (unchanged) |
 
 ## Bootstrap super admin
-After migration, promote a user once (SQL example):
+After migration, create or reset the platform owner (password only via env, not argv):
 
-```sql
-UPDATE users SET role = 'SUPER_ADMIN' WHERE email = 'you@example.com';
+```bash
+export DATABASE_URL="…"
+export DIRECT_DATABASE_URL="…"
+CRM_BOOTSTRAP_PASSWORD='your-secure-password' npx tsx scripts/upsert-crm-super-admin.ts you@example.com
 ```
+
+Then sign in at `/super-admin/login`.
 
 ## WALayer (provider)
 - **Auth:** `Authorization: Bearer wsk_live_…`
