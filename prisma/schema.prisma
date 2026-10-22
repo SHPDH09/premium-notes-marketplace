@@ -301,7 +301,18 @@ enum CrmContactStatus {
 
 enum CrmBillingInterval {
   MONTHLY
+  QUARTERLY
+  HALF_YEARLY
   YEARLY
+}
+
+enum CrmSubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAYMENT_PENDING
+  PAST_DUE
+  EXPIRED
+  CANCELLED
 }
 
 model User {
@@ -1060,8 +1071,16 @@ model CrmPlatformSettings {
 
 model CrmSubscriptionPlan {
   id                    String             @id @default(cuid())
+  planCode              String             @unique @map("plan_code")
   name                  String
+  description           String?            @db.Text
   priceInr              Int                @default(0) @map("price_inr")
+  priceQuarterlyInr     Int?               @map("price_quarterly_inr")
+  priceHalfYearlyInr    Int?               @map("price_half_yearly_inr")
+  priceYearlyInr        Int?               @map("price_yearly_inr")
+  setupFeeInr           Int                @default(0) @map("setup_fee_inr")
+  discountPercent       Int                @default(0) @map("discount_percent")
+  currency              String             @default("INR")
   billingInterval       CrmBillingInterval @default(MONTHLY) @map("billing_interval")
   maxWhatsAppNumbers    Int                @default(1) @map("max_whatsapp_numbers")
   maxAgents             Int                @default(5) @map("max_agents")
@@ -1073,13 +1092,18 @@ model CrmSubscriptionPlan {
   chatbotEnabled        Boolean            @default(false) @map("chatbot_enabled")
   callingEnabled        Boolean            @default(false) @map("calling_enabled")
   apiAccessEnabled      Boolean            @default(false) @map("api_access_enabled")
+  entitlements          Json?              @map("entitlements")
   trialDays             Int                @default(0) @map("trial_days")
+  featuredLabel         String?            @map("featured_label")
   isActive              Boolean            @default(true) @map("is_active")
+  archivedAt            DateTime?          @map("archived_at")
   sortOrder             Int                @default(0) @map("sort_order")
   createdAt             DateTime           @default(now()) @map("created_at")
   updatedAt             DateTime           @updatedAt @map("updated_at")
 
-  companies CrmCompany[]
+  companies            CrmCompany[]
+  subscriptionOrders   CrmSubscriptionOrder[]
+  subscriptionHistory  CrmSubscriptionHistory[]
 
   @@map("crm_subscription_plans")
 }
@@ -1106,12 +1130,19 @@ model CrmCompany {
   hidePlatformBranding   Boolean          @default(false) @map("hide_platform_branding")
   automationSettings     Json?            @map("automation_settings")
   status                 CrmCompanyStatus @default(ACTIVE)
+  agentsCanViewUnassignedChats Boolean    @default(false) @map("agents_can_view_unassigned_chats")
   subscriptionPlanId     String?          @map("subscription_plan_id")
+  subscriptionStatus     CrmSubscriptionStatus @default(TRIAL) @map("subscription_status")
   subscriptionExpiresAt  DateTime?        @map("subscription_expires_at")
+  subscriptionStartedAt  DateTime?        @map("subscription_started_at")
+  trialEndsAt            DateTime?        @map("trial_ends_at")
+  billingCycle           CrmBillingInterval? @map("billing_cycle")
   createdAt              DateTime         @default(now()) @map("created_at")
   updatedAt              DateTime         @updatedAt @map("updated_at")
 
   subscriptionPlan CrmSubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
+  subscriptionOrders CrmSubscriptionOrder[]
+  subscriptionHistory CrmSubscriptionHistory[]
   members          CrmCompanyMember[]
   teams            CrmTeam[]
   whatsappAccounts CrmWhatsAppAccount[]
@@ -1344,6 +1375,7 @@ model CrmMessage {
   sentByMemberId     String?                   @map("sent_by_member_id")
   deliveryStatus     CrmMessageDeliveryStatus  @default(QUEUED) @map("delivery_status")
   deliveryError      String?                   @map("delivery_error") @db.Text
+  providerPayload    Json?                     @map("provider_payload")
   sentAt             DateTime                  @default(now()) @map("sent_at")
 
   conversation  CrmConversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -1573,14 +1605,54 @@ model CrmCampaignRecipient {
   id         String   @id @default(cuid())
   campaignId String   @map("campaign_id")
   phone      String
-  status     String   @default("pending")
+  contactId  String?  @map("contact_id")
+  status     CrmCampaignRecipientStatus @default(PENDING)
   error      String?  @db.Text
+  providerMessageId String? @map("provider_message_id")
+  sentAt     DateTime? @map("sent_at")
   createdAt  DateTime @default(now()) @map("created_at")
 
   campaign CrmCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
   @@unique([campaignId, phone])
   @@map("crm_campaign_recipients")
+}
+
+model CrmSubscriptionOrder {
+  id              String        @id @default(cuid())
+  companyId       String        @map("company_id")
+  planId          String        @map("plan_id")
+  billingCycle    CrmBillingInterval @map("billing_cycle")
+  amountInr       Int           @map("amount_inr")
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  cashfreeOrderId String?       @unique @map("cashfree_order_id")
+  idempotencyKey  String        @unique @map("idempotency_key")
+  verifiedAt      DateTime?     @map("verified_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  company CrmCompany           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan    CrmSubscriptionPlan  @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, createdAt])
+  @@map("crm_subscription_orders")
+}
+
+model CrmSubscriptionHistory {
+  id          String   @id @default(cuid())
+  companyId   String   @map("company_id")
+  planId      String?  @map("plan_id")
+  action      String
+  fromPlanId  String?  @map("from_plan_id")
+  detail      Json?
+  actorUserId String?  @map("actor_user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company CrmCompany          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  plan    CrmSubscriptionPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@map("crm_subscription_history")
 }
 
 model CrmUsageRecord {

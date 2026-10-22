@@ -145,6 +145,23 @@ export async function walayerGetPlatformMessage(
   });
 }
 
+export async function walayerListMessages(params: {
+  apiKey: string;
+  apiBaseUrl?: string;
+  sessionId?: string;
+  limit?: number;
+}) {
+  return walayerRequest({
+    apiKey: params.apiKey,
+    apiBaseUrl: params.apiBaseUrl,
+    path: "/messages",
+    query: {
+      session_id: params.sessionId,
+      limit: params.limit ?? 100,
+    },
+  });
+}
+
 export async function walayerUploadMediaBase64(params: {
   apiKey: string;
   apiBaseUrl?: string;

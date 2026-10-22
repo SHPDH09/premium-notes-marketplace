@@ -19,25 +19,12 @@ type Conversation = {
   contact?: { name: string | null; phone: string; id?: string };
 };
 
-function messageBodyLabel(m: { bodyText: string | null; messageType: string }): string {
-  const t = (m.bodyText ?? "").trim();
-  if (t) return t;
-  const labels: Record<string, string> = {
-    text: "Text message",
-    image: "Image",
-    video: "Video",
-    audio: "Voice message",
-    document: "Document",
-    sticker: "Sticker",
-  };
-  return labels[m.messageType] ?? `[${m.messageType}]`;
-}
-
 type Message = {
   id: string;
   direction: string;
   messageType: string;
   bodyText: string | null;
+  displayText?: string;
   mediaUrl: string | null;
   mediaDisplayUrl?: string | null;
   deliveryStatus: string;
@@ -148,6 +135,11 @@ export function InboxWorkspace({
   }, [filter, statusFilter, priorityFilter, agentFilter, sort, search, memberId, isAdmin]);
 
   const loadThread = useCallback(async (id: string) => {
+    await fetch(`/api/crm/conversations/${id}/sync-messages`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => undefined);
+
     const [cRes, mRes, nRes] = await Promise.all([
       fetch(`/api/crm/conversations/${id}`, { credentials: "include" }),
       fetch(`/api/crm/conversations/${id}/messages`, { credentials: "include" }),
@@ -534,7 +526,9 @@ export function InboxWorkspace({
                     </a>
                   )
                 ) : null}
-                <p className="whitespace-pre-wrap">{messageBodyLabel(m)}</p>
+                <p className="whitespace-pre-wrap">
+                  {(m.bodyText ?? "").trim() || m.displayText || `[${m.messageType}]`}
+                </p>
                 <p className="mt-1 text-[10px] text-slate-400">
                   {new Date(m.sentAt).toLocaleString()} · {statusLabel(m.deliveryStatus)}
                   {m.repliedByLabel ? ` · ${m.repliedByLabel}` : ""}

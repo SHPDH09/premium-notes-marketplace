@@ -109,15 +109,18 @@ export async function handleWalayerMessageReceived(sessionId: string, data: Wala
     },
   });
 
+  const bodyFromPayload = messageText || parsed.text;
+
   await prisma.crmMessage.create({
     data: {
       conversationId: conversation.id,
       direction: "INBOUND",
       messageType: parsed.type,
-      bodyText: messageText,
+      bodyText: bodyFromPayload,
       mediaUrl: parsed.mediaUrl ?? undefined,
       providerMessageId: parsed.providerMessageId ?? providerMessageId ?? undefined,
       waMessageId: parsed.waMessageId ?? undefined,
+      providerPayload: data as object,
       sendMethod: "EXTERNAL",
       deliveryStatus: "DELIVERED",
       sentAt,

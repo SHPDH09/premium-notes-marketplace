@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCompanyMember } from "@/lib/crm/auth";
 import { withCrmJson } from "@/lib/crm/api-route";
+import { agentConversationFilter, getCompanyInboxPolicy } from "@/lib/crm/agent-inbox-access";
 import { serializeConversation } from "@/lib/crm/serialize";
 import { prisma } from "@/lib/db";
 import type { CrmConversationStatus, Prisma } from "@prisma/client";
@@ -20,20 +21,28 @@ export async function GET(req: NextRequest) {
     const isAdmin =
       session.role === "COMPANY_ADMIN" || session.memberRole === "COMPANY_ADMIN";
 
+    const inboxPolicy = await getCompanyInboxPolicy(session.companyId!);
+
     const and: Prisma.CrmConversationWhereInput[] = [{ companyId: session.companyId! }];
 
     if (status) and.push({ status });
     if (assigned === "me") and.push({ assignedMemberId: memberId });
-    if (assigned === "unassigned") and.push({ assignedMemberId: null });
+    if (assigned === "unassigned") {
+      if (!isAdmin && !inboxPolicy.agentsCanViewUnassignedChats) {
+        return NextResponse.json({ inboxPolicy, conversations: [] });
+      }
+      and.push({ assignedMemberId: null });
+    }
     if (agentId) and.push({ assignedMemberId: agentId });
     if (unreadOnly) and.push({ unreadCount: { gt: 0 } });
     if (priority === "HIGH" || priority === "URGENT") and.push({ priority });
-
-    if (!isAdmin && assigned !== "me") {
-      and.push({
-        OR: [{ assignedMemberId: null }, { assignedMemberId: memberId }],
-      });
-    }
+    const agentFilter = agentConversationFilter({
+      memberId,
+      isAdmin,
+      agentsCanViewUnassignedChats: inboxPolicy.agentsCanViewUnassignedChats,
+      assignedFilter: assigned,
+    });
+    if (agentFilter) and.push(agentFilter);
 
     if (q) {
       and.push({
@@ -63,6 +72,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({
+      inboxPolicy,
       conversations: rows.map((c) => ({
         ...serializeConversation(c),
         assigneeName: c.assignedMember?.user.name ?? null,

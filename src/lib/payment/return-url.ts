@@ -17,3 +17,10 @@ export function placementSubscribeReturnUrl(baseUrl: string, planOrderId: string
     planOrderId
   )}&order_id={order_id}`;
 }
+
+export function crmSubscriptionReturnUrl(baseUrl: string, subscriptionOrderId: string): string {
+  const origin = baseUrl.replace(/\/$/, "");
+  return `${origin}/crm/subscription-plans/success?crm_order_id=${encodeURIComponent(
+    subscriptionOrderId
+  )}&order_id={order_id}`;
+}

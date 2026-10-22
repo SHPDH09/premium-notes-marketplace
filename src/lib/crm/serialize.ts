@@ -1,4 +1,5 @@
 import type { CrmConversation } from "@prisma/client";
+import { extractWalayerTextDeep, messageDisplayFallback } from "@/lib/crm/walayer-message-parse";
 
 export function resolveCrmMediaUrl(stored: string | null | undefined): string | null {
   if (!stored) return null;
@@ -16,6 +17,7 @@ export function serializeCrmMessage(m: {
   messageType: string;
   bodyText: string | null;
   mediaUrl: string | null;
+  providerPayload?: unknown;
   sendMethod: string;
   deliveryStatus: string;
   deliveryError: string | null;
@@ -23,11 +25,16 @@ export function serializeCrmMessage(m: {
   sentByMember?: { user?: { name?: string | null } | null } | null;
 }) {
   const agentName = m.sentByMember?.user?.name;
+  const resolvedBody =
+    (m.bodyText ?? "").trim() ||
+    (m.providerPayload ? extractWalayerTextDeep(m.providerPayload) : "") ||
+    null;
   return {
     id: m.id,
     direction: m.direction,
     messageType: m.messageType,
-    bodyText: m.bodyText,
+    bodyText: resolvedBody,
+    displayText: messageDisplayFallback(m.messageType, resolvedBody),
     mediaUrl: m.mediaUrl,
     mediaDisplayUrl: resolveCrmMediaUrl(m.mediaUrl),
     sendMethod: m.sendMethod,

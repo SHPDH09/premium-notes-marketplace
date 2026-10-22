@@ -46,6 +46,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  const crmSubOrder = await prisma.crmSubscriptionOrder.findUnique({
+    where: { cashfreeOrderId: orderId },
+  });
+  if (crmSubOrder) {
+    const { fulfillCrmSubscriptionOrder } = await import("@/lib/crm/subscription/fulfill-order");
+    if (status === "PAID" || status === "SUCCESS") {
+      await fulfillCrmSubscriptionOrder(crmSubOrder.id, orderId);
+    } else if (status === "FAILED") {
+      await prisma.crmSubscriptionOrder.update({
+        where: { id: crmSubOrder.id },
+        data: { paymentStatus: "FAILED" },
+      });
+      await prisma.crmCompany.update({
+        where: { id: crmSubOrder.companyId },
+        data: { subscriptionStatus: "PAST_DUE" },
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const physicalOrder = await prisma.physicalOrder.findUnique({ where: { cashfreeOrderId: orderId } });
   if (!physicalOrder) return NextResponse.json({ ok: true });
 

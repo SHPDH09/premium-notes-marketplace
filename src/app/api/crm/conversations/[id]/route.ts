@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { assertAgentCanAccessConversation } from "@/lib/crm/agent-inbox-access";
 import { assertConversationCompany, requireCompanyMember } from "@/lib/crm/auth";
 import { withCrmJson } from "@/lib/crm/api-route";
 import { serializeConversation } from "@/lib/crm/serialize";
@@ -23,6 +24,14 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     });
     if (!conv) return NextResponse.json({ error: "Not found" }, { status: 404 });
     assertConversationCompany(conv.companyId, session.companyId!);
+    const isAdmin =
+      session.role === "COMPANY_ADMIN" || session.memberRole === "COMPANY_ADMIN";
+    await assertAgentCanAccessConversation({
+      companyId: session.companyId!,
+      memberId: session.memberId!,
+      isAdmin,
+      assignedMemberId: conv.assignedMemberId,
+    });
 
     await prisma.crmConversation.update({
       where: { id: conv.id },
