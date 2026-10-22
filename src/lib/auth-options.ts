@@ -13,13 +13,13 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
-      role: "STUDENT" | "ADMIN";
+      role: "STUDENT" | "ADMIN" | "SUPER_ADMIN" | "COMPANY_ADMIN" | "AGENT";
       status: "ACTIVE" | "DISABLED";
       sessionVersion: number;
     };
   }
   interface User {
-    role: "STUDENT" | "ADMIN";
+    role: "STUDENT" | "ADMIN" | "SUPER_ADMIN" | "COMPANY_ADMIN" | "AGENT";
     status: "ACTIVE" | "DISABLED";
     sessionVersion: number;
   }
@@ -28,7 +28,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: "STUDENT" | "ADMIN";
+    role: "STUDENT" | "ADMIN" | "SUPER_ADMIN" | "COMPANY_ADMIN" | "AGENT";
     status: "ACTIVE" | "DISABLED";
     sessionVersion: number;
   }
@@ -46,11 +46,15 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         admin: { label: "Admin", type: "text" },
+        portal: { label: "Portal", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const mode = credentials.admin === "true" ? "admin" : "student";
+        let mode: "student" | "admin" | "crm" | "super_admin" = "student";
+        if (credentials.portal === "super_admin") mode = "super_admin";
+        else if (credentials.portal === "crm") mode = "crm";
+        else if (credentials.admin === "true") mode = "admin";
         const check = await validateCredentialLogin(
           credentials.email,
           credentials.password,

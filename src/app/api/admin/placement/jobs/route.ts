@@ -3,7 +3,6 @@ import { z } from "zod";
 import { withAdminJson } from "@/lib/api/admin-route";
 import { prisma } from "@/lib/db";
 import { serializeJobPosting } from "@/lib/placement/serialize";
-import { scheduleWhatsAppChannelPublish } from "@/lib/whatsapp-channel/publish-job";
 import { JobApplyType, PublishStatus } from "@prisma/client";
 
 export async function GET() {
@@ -69,9 +68,6 @@ export async function POST(req: NextRequest) {
         sortOrder: d.sortOrder ?? 0,
       },
     });
-    if (status === "ACTIVE") {
-      scheduleWhatsAppChannelPublish(job.id);
-    }
     return NextResponse.json({ job: serializeJobPosting(job) }, { status: 201 });
   });
 }

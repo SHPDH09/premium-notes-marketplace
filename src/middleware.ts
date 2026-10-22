@@ -26,6 +26,18 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
+    if (path.startsWith("/super-admin") && !path.startsWith("/super-admin/login")) {
+      if (!token || token.role !== "SUPER_ADMIN") {
+        return NextResponse.redirect(new URL("/super-admin/login", req.url));
+      }
+    }
+
+    if (path.startsWith("/crm") && !path.startsWith("/crm/login")) {
+      if (!token || (token.role !== "COMPANY_ADMIN" && token.role !== "AGENT")) {
+        return NextResponse.redirect(new URL("/crm/login", req.url));
+      }
+    }
+
     if (path.startsWith("/admin") && !path.startsWith("/admin/login")) {
       if (!token || token.role !== "ADMIN") {
         return NextResponse.redirect(new URL("/admin/login", req.url));
@@ -48,6 +60,12 @@ export default withAuth(
       if (token?.role === "ADMIN") {
         return NextResponse.redirect(new URL("/admin", req.url));
       }
+      if (token?.role === "SUPER_ADMIN") {
+        return NextResponse.redirect(new URL("/super-admin", req.url));
+      }
+      if (token?.role === "COMPANY_ADMIN" || token?.role === "AGENT") {
+        return NextResponse.redirect(new URL("/crm/inbox", req.url));
+      }
       if (token?.role === "STUDENT") {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
@@ -57,6 +75,14 @@ export default withAuth(
       return NextResponse.redirect(new URL("/admin", req.url));
     }
 
+    if (path === "/super-admin/login" && token?.role === "SUPER_ADMIN") {
+      return NextResponse.redirect(new URL("/super-admin", req.url));
+    }
+
+    if (path === "/crm/login" && (token?.role === "COMPANY_ADMIN" || token?.role === "AGENT")) {
+      return NextResponse.redirect(new URL("/crm/inbox", req.url));
+    }
+
     return NextResponse.next();
   },
   {
@@ -64,11 +90,18 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
         if (path.startsWith("/admin/login")) return true;
+        if (path.startsWith("/super-admin/login")) return true;
+        if (path.startsWith("/crm/login")) return true;
         if (path === "/login" || path === "/register") return true;
         if (path.startsWith("/checkout")) return true;
         if (path.startsWith("/physical-checkout")) return true;
         if (path.startsWith("/notes/") && path.endsWith("/payment")) return true;
-        if (path.startsWith("/admin") || isStudentArea(path)) {
+        if (
+          path.startsWith("/admin") ||
+          path.startsWith("/super-admin") ||
+          path.startsWith("/crm") ||
+          isStudentArea(path)
+        ) {
           return !!token;
         }
         return true;
@@ -80,6 +113,8 @@ export default withAuth(
 export const config = {
   matcher: [
     "/admin/:path*",
+    "/super-admin/:path*",
+    "/crm/:path*",
     "/login",
     "/register",
     "/dashboard/:path*",

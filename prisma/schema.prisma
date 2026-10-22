@@ -11,6 +11,9 @@ datasource db {
 enum Role {
   STUDENT
   ADMIN
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  AGENT
 }
 
 enum UserStatus {
@@ -180,10 +183,91 @@ enum JobReviewStatus {
   REJECTED
 }
 
-enum WhatsAppChannelPostStatus {
+enum CrmCompanyStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum CrmMemberRole {
+  COMPANY_ADMIN
+  AGENT
+  SUPERVISOR
+}
+
+enum CrmAgentAvailability {
+  ONLINE
+  BUSY
+  OFFLINE
+}
+
+enum CrmWaConnectionStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  EXPIRED
+  ERROR
+}
+
+enum CrmConversationStatus {
+  OPEN
   PENDING
-  SUCCESS
+  RESOLVED
+  CLOSED
+}
+
+enum CrmConversationPriority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CrmMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CrmSendMethod {
+  MANUAL
+  AUTOMATION
+  CHATBOT
+  API
+  EXTERNAL
+}
+
+enum CrmMessageDeliveryStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
   FAILED
+  UNKNOWN
+}
+
+enum CrmCallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CrmCallRecordStatus {
+  RINGING
+  ANSWERED
+  REJECTED
+  MISSED
+  FAILED
+}
+
+enum CrmCampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CrmBillingInterval {
+  MONTHLY
+  YEARLY
 }
 
 model User {
@@ -218,6 +302,7 @@ model User {
   placedStudentProfile      PlacedStudent?
   jobApplications           JobApplication[]
   submittedJobPostings      JobPosting[] @relation("JobSubmittedBy")
+  crmCompanyMembers         CrmCompanyMember[]
 
   @@map("users")
 }
@@ -878,7 +963,6 @@ model JobPosting {
 
   submittedBy           User?                    @relation("JobSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: SetNull)
   applications          JobApplication[]
-  whatsappChannelPost   JobWhatsAppChannelPost?
 
   @@index([status, sortOrder])
   @@index([reviewStatus, source])
@@ -921,33 +1005,419 @@ model PlacedStudent {
   @@map("placed_students")
 }
 
-model WhatsAppChannelSettings {
-  id         String   @id @default("default")
-  enabled    Boolean  @default(false)
-  provider   String   @default("walayer")
-  apiBaseUrl String   @default("https://api.walayer.com/v1") @map("api_base_url")
-  sessionId  String?  @map("session_id")
-  channelId  String?  @map("channel_id")
-  apiKeyEnc  String?  @map("api_key_enc") @db.Text
-  updatedAt  DateTime @updatedAt @map("updated_at")
+model CrmPlatformSettings {
+  id                 String   @id @default("default")
+  walayerApiKeyEnc   String?  @map("walayer_api_key_enc") @db.Text
+  walayerApiBaseUrl  String   @default("https://api.walayer.com/v1") @map("walayer_api_base_url")
+  webhookSecretEnc   String?  @map("webhook_secret_enc") @db.Text
+  walayerWebhookId   String?  @map("walayer_webhook_id")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
-  @@map("whatsapp_channel_settings")
+  @@map("crm_platform_settings")
 }
 
-model JobWhatsAppChannelPost {
-  id           String                    @id @default(cuid())
-  jobId        String                    @unique @map("job_id")
-  status       WhatsAppChannelPostStatus @default(PENDING)
-  provider     String                    @default("walayer")
-  errorMessage String?                   @map("error_message") @db.Text
-  postedAt     DateTime?                 @map("posted_at")
-  createdAt    DateTime                  @default(now()) @map("created_at")
-  updatedAt    DateTime                  @updatedAt @map("updated_at")
+model CrmSubscriptionPlan {
+  id                    String             @id @default(cuid())
+  name                  String
+  priceInr              Int                @default(0) @map("price_inr")
+  billingInterval       CrmBillingInterval @default(MONTHLY) @map("billing_interval")
+  maxWhatsAppNumbers    Int                @default(1) @map("max_whatsapp_numbers")
+  maxAgents             Int                @default(5) @map("max_agents")
+  maxMessagesPerMonth   Int?               @map("max_messages_per_month")
+  maxMediaStorageMb     Int?               @map("max_media_storage_mb")
+  automationEnabled     Boolean            @default(true) @map("automation_enabled")
+  chatbotEnabled        Boolean            @default(false) @map("chatbot_enabled")
+  callingEnabled        Boolean            @default(false) @map("calling_enabled")
+  apiAccessEnabled      Boolean            @default(false) @map("api_access_enabled")
+  trialDays             Int                @default(0) @map("trial_days")
+  isActive              Boolean            @default(true) @map("is_active")
+  sortOrder             Int                @default(0) @map("sort_order")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
 
-  job JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  companies CrmCompany[]
 
-  @@index([status, createdAt])
-  @@map("job_whatsapp_channel_posts")
+  @@map("crm_subscription_plans")
+}
+
+model CrmCompany {
+  id                     String           @id @default(cuid())
+  name                   String
+  slug                   String           @unique
+  logoUrl                String?          @map("logo_url")
+  brandColor             String?          @map("brand_color")
+  status                 CrmCompanyStatus @default(ACTIVE)
+  subscriptionPlanId     String?          @map("subscription_plan_id")
+  subscriptionExpiresAt  DateTime?        @map("subscription_expires_at")
+  createdAt              DateTime         @default(now()) @map("created_at")
+  updatedAt              DateTime         @updatedAt @map("updated_at")
+
+  subscriptionPlan CrmSubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
+  members          CrmCompanyMember[]
+  teams            CrmTeam[]
+  whatsappAccounts CrmWhatsAppAccount[]
+  contacts         CrmContact[]
+  conversations    CrmConversation[]
+  tags             CrmTag[]
+  automationRules  CrmAutomationRule[]
+  campaigns        CrmCampaign[]
+  callRecords      CrmCallRecord[]
+  usageRecords     CrmUsageRecord[]
+  auditLogs        CrmAuditLog[]
+
+  @@index([status])
+  @@map("crm_companies")
+}
+
+model CrmCompanyMember {
+  id           String               @id @default(cuid())
+  companyId    String               @map("company_id")
+  userId       String               @map("user_id")
+  memberRole   CrmMemberRole        @map("member_role")
+  availability CrmAgentAvailability @default(OFFLINE)
+  isActive     Boolean              @default(true) @map("is_active")
+  teamId       String?              @map("team_id")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+
+  company              CrmCompany         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team                 CrmTeam?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  assignedConversations CrmConversation[] @relation("CrmConversationAssignee")
+  sentMessages         CrmMessage[]       @relation("CrmMessageSender")
+  internalNotes        CrmInternalNote[]
+  assignmentFrom       CrmConversationAssignment[] @relation("CrmAssignmentFrom")
+  assignmentTo         CrmConversationAssignment[] @relation("CrmAssignmentTo")
+  assignmentBy         CrmConversationAssignment[] @relation("CrmAssignmentBy")
+  notifications        CrmNotification[]
+
+  @@unique([companyId, userId])
+  @@index([companyId, memberRole])
+  @@map("crm_company_members")
+}
+
+model CrmTeam {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company CrmCompany         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  members CrmCompanyMember[]
+
+  @@unique([companyId, name])
+  @@map("crm_teams")
+}
+
+model CrmWhatsAppAccount {
+  id               String                @id @default(cuid())
+  companyId        String                @map("company_id")
+  label            String
+  provider         String                @default("walayer")
+  walayerSessionId String?               @unique @map("walayer_session_id")
+  phoneE164        String?               @map("phone_e164")
+  displayName      String?               @map("display_name")
+  status           CrmWaConnectionStatus @default(DISCONNECTED)
+  statusMessage    String?               @map("status_message") @db.Text
+  lastConnectedAt  DateTime?             @map("last_connected_at")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+
+  company       CrmCompany        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversations CrmConversation[]
+
+  @@index([companyId, status])
+  @@map("crm_whatsapp_accounts")
+}
+
+model CrmContact {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  phone     String
+  waJid     String?  @map("wa_jid")
+  name      String?
+  leadStatus String? @map("lead_status")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company       CrmCompany       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversations CrmConversation[]
+  contactTags   CrmContactTag[]
+
+  @@unique([companyId, phone])
+  @@index([companyId, name])
+  @@map("crm_contacts")
+}
+
+model CrmConversation {
+  id                String                  @id @default(cuid())
+  companyId         String                  @map("company_id")
+  contactId         String                  @map("contact_id")
+  whatsappAccountId String                  @map("whatsapp_account_id")
+  chatJid           String                  @map("chat_jid")
+  status            CrmConversationStatus   @default(OPEN)
+  priority          CrmConversationPriority @default(NORMAL)
+  assignedMemberId  String?                 @map("assigned_member_id")
+  unreadCount       Int                     @default(0) @map("unread_count")
+  lastMessageAt     DateTime?               @map("last_message_at")
+  lastMessagePreview String?                @map("last_message_preview")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+
+  company         CrmCompany                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact         CrmContact                  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  whatsappAccount CrmWhatsAppAccount          @relation(fields: [whatsappAccountId], references: [id], onDelete: Cascade)
+  assignedMember  CrmCompanyMember?           @relation("CrmConversationAssignee", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+  messages        CrmMessage[]
+  internalNotes   CrmInternalNote[]
+  assignments     CrmConversationAssignment[]
+  conversationTags CrmConversationTag[]
+  callRecords     CrmCallRecord[]
+
+  @@unique([whatsappAccountId, chatJid])
+  @@index([companyId, status, lastMessageAt])
+  @@index([companyId, assignedMemberId])
+  @@map("crm_conversations")
+}
+
+model CrmConversationAssignment {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  fromMemberId   String?  @map("from_member_id")
+  toMemberId     String?  @map("to_member_id")
+  assignedById   String?  @map("assigned_by_id")
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation CrmConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fromMember   CrmCompanyMember? @relation("CrmAssignmentFrom", fields: [fromMemberId], references: [id], onDelete: SetNull)
+  toMember     CrmCompanyMember? @relation("CrmAssignmentTo", fields: [toMemberId], references: [id], onDelete: SetNull)
+  assignedBy   CrmCompanyMember? @relation("CrmAssignmentBy", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt])
+  @@map("crm_conversation_assignments")
+}
+
+model CrmMessage {
+  id                 String                    @id @default(cuid())
+  conversationId     String                    @map("conversation_id")
+  direction          CrmMessageDirection
+  messageType        String                    @default("text") @map("message_type")
+  bodyText           String?                   @map("body_text") @db.Text
+  mediaUrl           String?                   @map("media_url")
+  providerMessageId  String?                   @map("provider_message_id")
+  waMessageId        String?                   @map("wa_message_id")
+  idempotencyKey     String?                   @map("idempotency_key")
+  sendMethod         CrmSendMethod             @default(MANUAL) @map("send_method")
+  sentByMemberId     String?                   @map("sent_by_member_id")
+  deliveryStatus     CrmMessageDeliveryStatus  @default(QUEUED) @map("delivery_status")
+  deliveryError      String?                   @map("delivery_error") @db.Text
+  sentAt             DateTime                  @default(now()) @map("sent_at")
+
+  conversation  CrmConversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sentByMember  CrmCompanyMember?     @relation("CrmMessageSender", fields: [sentByMemberId], references: [id], onDelete: SetNull)
+  statusEvents  CrmMessageStatusEvent[]
+
+  @@unique([providerMessageId])
+  @@index([conversationId, sentAt])
+  @@map("crm_messages")
+}
+
+model CrmMessageStatusEvent {
+  id        String                   @id @default(cuid())
+  messageId String                   @map("message_id")
+  status    CrmMessageDeliveryStatus
+  recordedAt DateTime                @default(now()) @map("recorded_at")
+
+  message CrmMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, recordedAt])
+  @@map("crm_message_status_events")
+}
+
+model CrmInternalNote {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  memberId       String   @map("member_id")
+  body           String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation CrmConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  member       CrmCompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("crm_internal_notes")
+}
+
+model CrmTag {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  name      String
+  color     String   @default("#16a34a")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company          CrmCompany           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contactTags      CrmContactTag[]
+  conversationTags CrmConversationTag[]
+
+  @@unique([companyId, name])
+  @@map("crm_tags")
+}
+
+model CrmContactTag {
+  contactId String @map("contact_id")
+  tagId     String @map("tag_id")
+
+  contact CrmContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     CrmTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@map("crm_contact_tags")
+}
+
+model CrmConversationTag {
+  conversationId String @map("conversation_id")
+  tagId          String @map("tag_id")
+
+  conversation CrmConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tag          CrmTag            @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, tagId])
+  @@map("crm_conversation_tags")
+}
+
+model CrmCallRecord {
+  id             String             @id @default(cuid())
+  companyId      String             @map("company_id")
+  conversationId String?            @map("conversation_id")
+  providerCallId String?            @map("provider_call_id")
+  direction      CrmCallDirection
+  status         CrmCallRecordStatus
+  callerJid      String?            @map("caller_jid")
+  chatJid        String?            @map("chat_jid")
+  durationSec    Int?               @map("duration_sec")
+  internalNotes  String?            @map("internal_notes") @db.Text
+  outcome        String?
+  startedAt      DateTime           @default(now()) @map("started_at")
+  endedAt        DateTime?          @map("ended_at")
+
+  company      CrmCompany       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  conversation CrmConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, startedAt])
+  @@map("crm_call_records")
+}
+
+model CrmAutomationRule {
+  id        String   @id @default(cuid())
+  companyId String   @map("company_id")
+  name      String
+  ruleType  String   @map("rule_type")
+  enabled   Boolean  @default(true)
+  config    Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company CrmCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, enabled])
+  @@map("crm_automation_rules")
+}
+
+model CrmCampaign {
+  id          String            @id @default(cuid())
+  companyId   String            @map("company_id")
+  name        String
+  status      CrmCampaignStatus @default(DRAFT)
+  templateBody String?          @map("template_body") @db.Text
+  scheduledAt DateTime?         @map("scheduled_at")
+  stats       Json?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  company    CrmCompany            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  recipients CrmCampaignRecipient[]
+
+  @@index([companyId, status])
+  @@map("crm_campaigns")
+}
+
+model CrmCampaignRecipient {
+  id         String   @id @default(cuid())
+  campaignId String   @map("campaign_id")
+  phone      String
+  status     String   @default("pending")
+  error      String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign CrmCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, phone])
+  @@map("crm_campaign_recipients")
+}
+
+model CrmUsageRecord {
+  id          String   @id @default(cuid())
+  companyId   String   @map("company_id")
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+  messagesIn  Int      @default(0) @map("messages_in")
+  messagesOut Int      @default(0) @map("messages_out")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company CrmCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, periodStart])
+  @@map("crm_usage_records")
+}
+
+model CrmWebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String   @default("walayer")
+  eventId     String   @unique @map("event_id")
+  eventType   String   @map("event_type")
+  sessionId   String?  @map("session_id")
+  payload     Json
+  processed   Boolean  @default(false)
+  processedAt DateTime? @map("processed_at")
+  error       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([processed, createdAt])
+  @@map("crm_webhook_events")
+}
+
+model CrmNotification {
+  id        String   @id @default(cuid())
+  memberId  String   @map("member_id")
+  type      String
+  title     String
+  body      String?  @db.Text
+  payload   Json?
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  member CrmCompanyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, readAt])
+  @@map("crm_notifications")
+}
+
+model CrmAuditLog {
+  id        String   @id @default(cuid())
+  companyId String?  @map("company_id")
+  actorId   String?  @map("actor_id")
+  action    String
+  entity    String
+  entityId  String   @map("entity_id")
+  detail    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company CrmCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@map("crm_audit_logs")
 }
 
 model AdminAuditLog {

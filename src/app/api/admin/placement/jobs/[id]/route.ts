@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withAdminJson } from "@/lib/api/admin-route";
 import { prisma } from "@/lib/db";
-import { isJobLiveOnPublicBoard } from "@/lib/placement/job-board-visible";
 import { serializeJobPosting } from "@/lib/placement/serialize";
-import { scheduleWhatsAppChannelPublish } from "@/lib/whatsapp-channel/publish-job";
 import { JobApplyType, PublishStatus } from "@prisma/client";
 
 const patchSchema = z.object({
@@ -29,8 +27,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const before = await prisma.jobPosting.findUnique({ where: { id: params.id } });
-    if (!before) {
+    const existing = await prisma.jobPosting.findUnique({ where: { id: params.id } });
+    if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
@@ -38,12 +36,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       where: { id: params.id },
       data: parsed.data,
     });
-
-    const wasLive = isJobLiveOnPublicBoard(before);
-    const nowLive = isJobLiveOnPublicBoard(job);
-    if (!wasLive && nowLive) {
-      scheduleWhatsAppChannelPublish(job.id);
-    }
 
     return NextResponse.json({ job: serializeJobPosting(job) });
   });
