@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireCompanyMember } from "@/lib/crm/auth";
 import { getWalayerPlatformCredentials } from "@/lib/crm/platform-settings";
-import { walayerPairStreamUrl } from "@/lib/walayer/client";
+import { walayerPairStreamUrl, walayerStartPair } from "@/lib/walayer/client";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -21,6 +21,8 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     if (!creds) {
       return new Response("Provider not configured", { status: 503 });
     }
+
+    await walayerStartPair(creds.apiKey, creds.apiBaseUrl, account.walayerSessionId);
 
     const url = walayerPairStreamUrl(creds.apiBaseUrl, account.walayerSessionId);
     const upstream = await fetch(url, {

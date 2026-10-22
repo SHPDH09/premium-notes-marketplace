@@ -18,6 +18,7 @@ type Account = {
 export default function CrmConnectionsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [label, setLabel] = useState("");
+  const [country, setCountry] = useState("IN");
   const [pairingId, setPairingId] = useState<string | null>(null);
   const [qrHint, setQrHint] = useState<string>("");
 
@@ -55,7 +56,10 @@ export default function CrmConnectionsPage() {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: label.trim() || "Support line" }),
+      body: JSON.stringify({
+        label: label.trim() || "Support line",
+        country: country.toUpperCase(),
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -81,13 +85,29 @@ export default function CrmConnectionsPage() {
         <CardHeader>
           <CardTitle className="text-emerald-400">Add number</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Input
-            placeholder="Label (e.g. Sales)"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            className="max-w-xs border-slate-700 bg-slate-950"
-          />
+        <CardContent className="flex flex-wrap items-end gap-2">
+          <div>
+            <label className="text-xs text-slate-500">Label</label>
+            <Input
+              placeholder="e.g. Support"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="mt-1 max-w-xs border-slate-700 bg-slate-950"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500">Country (WALayer)</label>
+            <select
+              className="mt-1 block rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+            >
+              <option value="IN">India (IN)</option>
+              <option value="US">United States (US)</option>
+              <option value="GB">United Kingdom (GB)</option>
+              <option value="AE">UAE (AE)</option>
+            </select>
+          </div>
           <Button onClick={() => void createConnection()}>Create & show QR</Button>
         </CardContent>
       </Card>
